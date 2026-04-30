@@ -1,0 +1,36 @@
+# --- Environment Variables ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- Python (Server) ---
+server/__pycache__/
+server/*.py[cod]
+server/*$py.class
+server/.venv/
+server/venv/
+server/env/
+server/build/
+server/dist/
+server/*.egg-info/
+
+# --- Node.js (Client) ---
+client/node_modules/
+client/.next/
+client/out/
+client/build/
+client/.vercel
+client/*.tsbuildinfo
+
+# --- Docker ---
+.docker/
+
+# --- Databases ---
+postgres_data/
+
+# --- OS & Misc ---
+.DS_Store
+Thumbs.db
+*.log
