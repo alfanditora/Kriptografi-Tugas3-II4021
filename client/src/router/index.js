@@ -50,11 +50,13 @@ router.beforeEach((to) => {
   }
 
   // Cek jika rute membutuhkan inisialisasi kriptografi (kunci privat di memori)
+  // Catatan: Jika user sudah login tapi kunci hilang (refresh), biarkan masuk ke route
+  // dan tampilkan unlock modal di layout. Jangan redirect ke login.
   if (to.meta.requiresCrypto) {
-    if (!cryptoStore.isInitialized) {
-      // Jika sudah login tapi kunci hilang (misal refresh), arahkan ke login untuk unlock ulang
+    if (!authStore.isAuthenticated) {
       return { name: 'login' }
     }
+    // Jika token ada tapi crypto belum siap, biarkan masuk - unlock modal akan handle
   }
 
   // Cek jika rute khusus untuk guest (seperti login/registrasi)

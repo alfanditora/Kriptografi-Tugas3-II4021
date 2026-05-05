@@ -1,9 +1,9 @@
 <template>
   <MainLayout>
-    <v-row no-gutters class="rounded-xl overflow-hidden dashboard-container" style="border: 1px solid #DFE2F1; background: white; height: calc(100vh - 112px);">
+    <v-row no-gutters class="rounded-xl overflow-hidden dashboard-container" style="border: 1px solid #DFE2F1; background: white;">
       
       <!-- Sidebar Kiri: Daftar Kontak/Percakapan -->
-      <v-col cols="12" md="4" lg="3" class="border-r border-[#EDF2F7] fill-height d-flex flex-column bg-white">
+      <v-col cols="12" md="4" lg="3" class="sidebar-border fill-height d-flex flex-column" style="background-color: white;">
         <!-- Header Sidebar -->
         <div class="pa-6 pb-2">
           <h1 class="text-h5 font-weight-bold" style="color: #2D3748;">Chat</h1>
@@ -51,11 +51,11 @@
             <v-list-item
               v-for="contact in filteredContacts"
               :key="contact.id"
-              :active="contact.id === selectedUserId"
+              :active="String(contact.id) === String(selectedUserId)"
               @click="selectUser(contact)"
               class="rounded-xl mx-2 mb-1 pa-3"
               active-color="#1DA88B"
-              :style="contact.id === selectedUserId ? 'background-color: #DFF1EE !important;' : ''"
+              :style="String(contact.id) === String(selectedUserId) ? 'background-color: #DFF1EE !important;' : ''"
             >
               <template v-slot:prepend>
                 <v-avatar color="#DFF1EE" size="40" class="mr-3">
@@ -71,7 +71,7 @@
               </v-list-item-subtitle>
 
               <template v-slot:append>
-                <v-icon v-if="contact.id === selectedUserId" icon="mdi-chevron-right" size="16" color="#1DA88B"></v-icon>
+                <v-icon v-if="String(contact.id) === String(selectedUserId)" icon="mdi-chevron-right" size="16" color="#1DA88B"></v-icon>
               </template>
             </v-list-item>
           </v-list>
@@ -97,13 +97,13 @@
         <!-- Area Obrolan Aktif -->
         <template v-else>
           <!-- Header Obrolan -->
-          <div class="pa-4 d-flex align-center border-b border-[#EDF2F7] bg-white">
+          <div class="pa-4 d-flex align-center border-bottom" style="background-color: white;">
             <v-avatar color="#DFF1EE" size="48" class="mr-4">
               <v-icon icon="mdi-account" color="#1DA88B"></v-icon>
             </v-avatar>
             <div class="flex-grow-1">
               <h2 class="text-subtitle-1 font-weight-bold" style="color: #2D3748; line-height: 1.2;">
-                {{ chatHeaderName }}
+                {{ activeContact?.email || 'Memuat...' }}
               </h2>
               <div class="d-flex align-center">
                 <v-icon icon="mdi-lock" size="14" color="#1DA88B" class="mr-1"></v-icon>
@@ -119,7 +119,8 @@
           <!-- Pesan -->
           <div
             ref="messagesContainer"
-            class="flex-grow-1 pa-6 overflow-y-auto d-flex flex-column bg-[#F7F9FC]"
+            class="flex-grow-1 pa-6 overflow-y-auto d-flex flex-column messages-area"
+            style="background-color: #F7F9FC;"
           >
             <!-- Status Memuat -->
             <div v-if="!isEncrypted" class="fill-height d-flex flex-column align-center justify-center">
@@ -178,7 +179,7 @@
           </div>
 
           <!-- Input Obrolan -->
-          <div class="pa-4 border-t border-[#EDF2F7] bg-white">
+          <div class="pa-4 border-top" style="background-color: white;">
             <div class="d-flex align-center bg-grey-lighten-4 rounded-pill px-4 py-2">
               
               <!-- Fitur Emoji -->
@@ -187,8 +188,8 @@
                   <v-btn v-bind="props" icon="mdi-emoticon-outline" variant="text" color="#718096" density="comfortable"></v-btn>
                 </template>
                 <v-card class="pa-2 rounded-xl" elevation="4">
-                  <div class="grid grid-cols-4 gap-2 p-1">
-                    <span v-for="e in commonEmojis" :key="e" @click="addEmoji(e)" class="text-2xl cursor-pointer p-1 rounded-lg transition-colors hover:bg-[#F7F9FC] flex justify-center items-center">{{ e }}</span>
+                  <div class="emoji-grid">
+                    <span v-for="e in commonEmojis" :key="e" @click="addEmoji(e)" class="emoji-item">{{ e }}</span>
                   </div>
                 </v-card>
               </v-menu>
@@ -250,7 +251,12 @@ const authStore = useAuthStore()
 const contacts = ref([])
 const search = ref('')
 const selectedUserId = computed(() => route.params.userId)
-const otherUser = ref(null)
+
+// Objek kontak aktif (instan sinkron dengan sidebar)
+const activeContact = computed(() => {
+  return contacts.value.find(c => String(c.id) === String(selectedUserId.value))
+})
+
 const messages = ref([])
 const newMessage = ref('')
 const sending = ref(false)
@@ -277,32 +283,29 @@ const filteredContacts = computed(() => {
   )
 })
 
-// Get selected contact from contacts list for display sync
-const selectedContact = computed(() => {
-  if (!selectedUserId.value) return null
-  return contacts.value.find(c => c.id === selectedUserId.value) || null
-})
-
-// Display name that syncs with selected contact immediately
-const chatHeaderName = computed(() => {
-  return otherUser.value?.email || selectedContact.value?.email || 'Memuat...'
-})
-
 onMounted(async () => {
   await loadContacts()
-  if (selectedUserId.value) {
+  // Hanya setup chat jika crypto sudah diinisialisasi (private key tersedia)
+  if (selectedUserId.value && cryptoStore.isInitialized) {
     await setupChat()
   }
 })
 
 // Pantau perubahan parameter URL untuk ganti chat
 watch(() => selectedUserId.value, async (newId) => {
-  if (newId) {
+  if (newId && cryptoStore.isInitialized) {
     await setupChat()
   } else {
-    otherUser.value = null
     messages.value = []
     isEncrypted.value = false
+  }
+})
+
+// Pantau ketika crypto store menjadi initialized (setelah unlock)
+watch(() => cryptoStore.isInitialized, async (initialized) => {
+  if (initialized && selectedUserId.value) {
+    // Setelah unlock, langsung setup chat jika ada user yang dipilih
+    await setupChat()
   }
 })
 
@@ -316,15 +319,17 @@ async function loadContacts() {
 }
 
 async function setupChat() {
+  if (!selectedUserId.value) return
+  if (!cryptoStore.isInitialized) return
+
   isEncrypted.value = false
   messages.value = []
   try {
     const cryptoInfo = await messageApi.getConversationCrypto(selectedUserId.value)
-    otherUser.value = cryptoInfo.otherUser
 
     const sharedSecretData = await cryptoStore.computeSharedSecret(
       cryptoInfo.publicKey,
-      otherUser.value.id
+      String(selectedUserId.value)
     )
     aesKey = sharedSecretData.aesKey
     hmacKey = sharedSecretData.hmacKey
@@ -333,6 +338,7 @@ async function setupChat() {
     await loadMessages()
     scrollToBottom()
   } catch (err) {
+    console.error('Gagal setup chat:', err)
     showError.value = true
     errorMessage.value = err.message || 'Gagal menyiapkan enkripsi'
   }
@@ -395,7 +401,7 @@ async function sendMessage() {
 
     const payload = {
       sender_email: authStore.user?.email,
-      receiver_email: otherUser.value?.email,
+      receiver_email: activeContact.value?.email,
       ciphertext: crypto.arrayBufferToBase64(ciphertext),
       iv: crypto.arrayBufferToBase64(iv),
       mac: crypto.arrayBufferToBase64(mac),
@@ -455,6 +461,48 @@ function formatTime(date) {
 </script>
 
 <style scoped>
+.dashboard-container {
+  height: calc(100vh - 120px);
+}
+
+.messages-area {
+  height: 0; /* Memaksa flex-grow dan overflow-y bekerja */
+}
+
+.sidebar-border {
+  border-right: 1px solid #EDF2F7;
+}
+
+.border-bottom {
+  border-bottom: 1px solid #EDF2F7;
+}
+
+.border-top {
+  border-top: 1px solid #EDF2F7;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 8px;
+}
+
+.emoji-item {
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.emoji-item:hover {
+  background-color: #F7F9FC;
+}
+
 .search-field :deep(.v-field__outline) {
   --v-field-border-width: 1px !important;
   color: #E2E8F0 !important;
