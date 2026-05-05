@@ -3,9 +3,14 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import vuetify from './plugins/vuetify'
+import { initMockData, isMockEnabled } from './mocks'
 
 // Vuetify styles
 import 'vuetify/styles'
+
+if (isMockEnabled) {
+  initMockData();
+}
 
 const app = createApp(App)
 
