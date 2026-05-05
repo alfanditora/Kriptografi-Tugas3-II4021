@@ -9,13 +9,13 @@
       rounded="xl"
       style="border: 1px solid #DFE2F1;"
     >
-      <!-- Logo & Header Section -->
+      <!-- Bagian Logo & Header -->
       <div class="text-center mb-8">
         <div
           class="inline-flex items-center justify-center pa-3 rounded-xl mb-4"
           style="background-color: #DFF1EE;"
         >
-          <!-- Logo Icon -->
+          <!-- Ikon Logo -->
           <v-icon
             icon="mdi-shield-lock"
             size="32"
@@ -23,14 +23,14 @@
           ></v-icon>
         </div>
         <h1 class="text-2xl font-bold mb-2" style="color: #2D3748;">
-          Create an account
+          Buat akun baru
         </h1>
         <p class="text-sm" style="color: #718096;">
-          Join SEChatbox - A Safely Encrypted box for all your chatting needs
+          Bergabung dengan SEChatbox - Kotak obrolan aman untuk semua kebutuhan Anda
         </p>
       </div>
 
-      <!-- Error Alert -->
+      <!-- Peringatan Error -->
       <v-alert
         v-if="authStore.error"
         type="error"
@@ -45,11 +45,11 @@
 
       <v-form @submit.prevent="handleSubmit" ref="form">
         <v-row dense>
-          <!-- First Name -->
+          <!-- Nama Depan -->
           <v-col cols="12" sm="6">
             <div class="mb-4">
               <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-                First Name
+                Nama Depan
               </label>
               <v-text-field
                 v-model="formData.firstName"
@@ -65,11 +65,11 @@
             </div>
           </v-col>
 
-          <!-- Last Name -->
+          <!-- Nama Belakang -->
           <v-col cols="12" sm="6">
             <div class="mb-4">
               <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-                Last Name
+                Nama Belakang
               </label>
               <v-text-field
                 v-model="formData.lastName"
@@ -89,7 +89,7 @@
         <!-- Email -->
         <div class="mb-4">
           <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-            Email Address
+            Alamat Email
           </label>
           <v-text-field
             v-model="formData.email"
@@ -105,15 +105,15 @@
           ></v-text-field>
         </div>
 
-        <!-- Password -->
+        <!-- Kata Sandi -->
         <div class="mb-4">
           <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-            Password
+            Kata Sandi
           </label>
           <v-text-field
             v-model="formData.password"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="Minimum 8 characters"
+            placeholder="Minimal 8 karakter"
             :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
             @click:append-inner="showPassword = !showPassword"
             :rules="[rules.required, rules.minLength]"
@@ -126,10 +126,10 @@
           ></v-text-field>
         </div>
 
-        <!-- Confirm Password -->
+        <!-- Konfirmasi Kata Sandi -->
         <div class="mb-4">
           <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-            Confirm Password
+            Konfirmasi Kata Sandi
           </label>
           <v-text-field
             v-model="formData.confirmPassword"
@@ -147,13 +147,13 @@
           ></v-text-field>
         </div>
 
-        <!-- Terms Text -->
+        <!-- Teks Persyaratan -->
         <p class="text-xs mb-6" style="color: #718096;">
-          By clicking "Create Account", you agree to our
-          <a href="#" class="hover:underline" style="color: #1DA88B;">Terms of Service</a>.
+          Dengan mengklik "Buat Akun", Anda menyetujui
+          <a href="#" class="hover:underline" style="color: #1DA88B;">Ketentuan Layanan</a> kami.
         </p>
 
-        <!-- Create Account Button -->
+        <!-- Tombol Buat Akun -->
         <v-btn
           type="submit"
           block
@@ -164,23 +164,23 @@
           style="background-color: #1DA88B; color: white;"
           elevation="0"
         >
-          Create Account
+          Buat Akun
         </v-btn>
       </v-form>
 
-      <!-- Divider -->
+      <!-- Pemisah -->
       <div class="relative my-6">
         <div class="absolute inset-0 flex items-center">
           <div class="w-full" style="border-top: 1px solid #DFE2F1;"></div>
         </div>
         <div class="relative flex justify-center text-sm">
           <span class="px-2 bg-white" style="color: #718096;">
-            Or sign up with
+            Atau daftar dengan
           </span>
         </div>
       </div>
 
-      <!-- Google Sign Up Button -->
+      <!-- Tombol Daftar Google -->
       <v-btn
         block
         size="large"
@@ -190,18 +190,18 @@
         elevation="0"
       >
         <v-icon left class="mr-2">mdi-google</v-icon>
-        Sign up with Google
+        Daftar dengan Google
       </v-btn>
 
-      <!-- Sign In Link -->
+      <!-- Tautan Masuk -->
       <div class="text-center mt-8 text-sm" style="color: #718096;">
-        Already have an account?
+        Sudah punya akun?
         <router-link
           to="/login"
           class="ml-1 font-semibold hover:underline"
           style="color: #1DA88B;"
         >
-          Sign in
+          Masuk sekarang
         </router-link>
       </div>
     </v-card>
@@ -210,17 +210,18 @@
 
 <script setup>
 import { ref } from 'vue'
-// import { useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
+import { useCryptoStore } from '../store/cryptoStore'
+import * as crypto from '../services/crypto'
 import AuthLayout from '../layouts/AuthLayout.vue'
 
-// const router = useRouter()
+const router = useRouter()
 const authStore = useAuthStore()
+const cryptoStore = useCryptoStore()
 
-// Form state
+// State formulir
 const formData = ref({
-  firstName: '',
-  lastName: '',
   email: '',
   password: '',
   confirmPassword: ''
@@ -228,35 +229,73 @@ const formData = ref({
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-// Validation rules
+// Aturan validasi
 const rules = {
-  required: (v) => !!v || 'This field is required',
-  email: (v) => /.+@.+\..+/.test(v) || 'Please enter a valid email',
-  minLength: (v) => v.length >= 8 || 'Password must be at least 8 characters',
-  matchPassword: (v) => v === formData.value.password || 'Passwords do not match'
+  required: (v) => !!v || 'Field ini wajib diisi',
+  email: (v) => /.+@.+\..+/.test(v) || 'Harap masukkan email yang valid',
+  minLength: (v) => v.length >= 8 || 'Kata sandi minimal 8 karakter',
+  matchPassword: (v) => v === formData.value.password || 'Kata sandi tidak cocok'
 }
 
-// Handle form submission
+// Menangani pengiriman formulir
 async function handleSubmit() {
-  // Check if passwords match
   if (formData.value.password !== formData.value.confirmPassword) {
+    console.error('Password tidak cocok');
     return
   }
 
+  console.log('Memulai proses registrasi untuk:', formData.value.email);
+
   try {
-    await authStore.register({
-      firstName: formData.value.firstName,
-      lastName: formData.value.lastName,
+    // Siapkan data kriptografi (Phase 5.1)
+    console.log('Men-generate key pair dan mengenkripsi private key...');
+    const cryptoData = await crypto.prepareRegistrationData(
+      formData.value.email,
+      formData.value.password
+    )
+    console.log('Data kriptografi siap.');
+
+    // Susun payload sesuai API & Table Schema.md
+    const payload = {
       email: formData.value.email,
-      password: formData.value.password
-      // Note: Crypto operations (ECDH key generation, AES encryption)
-      // will be added here later per the assignment requirements
-    })
-    
-    alert('Registration successful! (Redirect to chat page will be implemented later)')
-    // router.push('/contacts')  // Will enable when router is imported
+      password: formData.value.password,
+      crypto: {
+        publicKey: {
+          kty: "OKP",
+          crv: "X25519",
+          x: crypto.arrayBufferToBase64(cryptoData.publicKey)
+        },
+        encryptedPrivateKey: {
+          ciphertext: crypto.arrayBufferToBase64(cryptoData.encryptedPrivateKey),
+          iv: crypto.arrayBufferToBase64(cryptoData.iv),
+          alg: "AES-256-CBC"
+        },
+        kdf: {
+          name: "PBKDF2",
+          hash: "SHA-256",
+          salt: crypto.arrayBufferToBase64(cryptoData.kdfSalt),
+          iterations: cryptoData.kdfIterations
+        }
+      }
+    }
+
+    console.log('Mengirim payload registrasi ke mock API...');
+    await authStore.register(payload)
+    console.log('Registrasi berhasil.');
+
+    // Inisialisasi kunci privat agar isInitialized menjadi true (Phase 5.1)
+    console.log('Menyiapkan kunci privat untuk sesi ini...');
+    await cryptoStore.decryptPrivateKey(
+      formData.value.password,
+      payload.crypto.encryptedPrivateKey,
+      payload.crypto.kdf.salt,
+      payload.crypto.kdf.iterations
+    )
+    console.log('Kunci privat siap di memori.');
+
+    router.push('/chat')
   } catch (error) {
-    console.error('Registration failed:', error)
+    console.error('Registrasi gagal di View:', error.message)
   }
 }
 </script>

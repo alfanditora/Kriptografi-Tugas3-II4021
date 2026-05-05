@@ -9,13 +9,13 @@
       rounded="xl"
       style="border: 1px solid #DFE2F1;"
     >
-      <!-- Logo Section -->
+      <!-- Bagian Logo -->
       <div class="text-center mb-8">
         <div
           class="inline-flex items-center justify-center pa-3 rounded-xl mb-4"
           style="background-color: #DFF1EE;"
         >
-          <!-- Logo Icon -->
+          <!-- Ikon Logo -->
           <v-icon
             icon="mdi-shield-lock"
             size="32"
@@ -23,14 +23,14 @@
           ></v-icon>
         </div>
         <h1 class="text-2xl font-bold mb-2" style="color: #2D3748;">
-          Welcome Back
+          Selamat Datang Kembali
         </h1>
         <p class="text-sm" style="color: #718096;">
-          Enter your details to jump back into your box
+          Masukkan detail Anda untuk masuk kembali ke kotak pesan Anda
         </p>
       </div>
 
-      <!-- Error Alert -->
+      <!-- Peringatan Error -->
       <v-alert
         v-if="authStore.error"
         type="error"
@@ -44,15 +44,15 @@
       </v-alert>
 
       <v-form @submit.prevent="handleSubmit" ref="form">
-        <!-- Email Field -->
+        <!-- Field Email -->
         <div class="mb-4">
           <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-            Email Address
+            Alamat Email
           </label>
           <v-text-field
             v-model="formData.email"
             type="email"
-            placeholder="name@company.com"
+            placeholder="nama@perusahaan.com"
             :rules="[rules.required, rules.email]"
             variant="outlined"
             density="comfortable"
@@ -63,10 +63,10 @@
           ></v-text-field>
         </div>
 
-        <!-- Password Field -->
+        <!-- Field Kata Sandi -->
         <div class="mb-4">
           <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-            Password
+            Kata Sandi
           </label>
           <v-text-field
             v-model="formData.password"
@@ -84,11 +84,11 @@
           ></v-text-field>
         </div>
 
-        <!-- Remember Me & Forgot Password -->
+        <!-- Ingat Saya & Lupa Kata Sandi -->
         <div class="flex items-center justify-between mb-6">
           <v-checkbox
             v-model="rememberMe"
-            label="Remember me"
+            label="Ingat saya"
             hide-details
             density="compact"
             color="#1DA88B"
@@ -100,11 +100,11 @@
             class="text-sm font-medium hover:underline"
             style="color: #1DA88B;"
           >
-            Forgot password?
+            Lupa kata sandi?
           </a>
         </div>
 
-        <!-- Submit Button -->
+        <!-- Tombol Masuk -->
         <v-btn
           type="submit"
           block
@@ -115,23 +115,23 @@
           style="background-color: #1DA88B; color: white;"
           elevation="0"
         >
-          Sign In
+          Masuk
         </v-btn>
       </v-form>
 
-      <!-- Divider -->
+      <!-- Pemisah -->
       <div class="relative my-6">
         <div class="absolute inset-0 flex items-center">
           <div class="w-full" style="border-top: 1px solid #DFE2F1;"></div>
         </div>
         <div class="relative flex justify-center text-sm">
           <span class="px-2 bg-white" style="color: #718096;">
-            Or sign in with
+            Atau masuk dengan
           </span>
         </div>
       </div>
 
-      <!-- Google Sign In Button -->
+      <!-- Tombol Masuk Google -->
       <v-btn
         block
         size="large"
@@ -141,18 +141,18 @@
         elevation="0"
       >
         <v-icon left class="mr-2">mdi-google</v-icon>
-        Sign in with Google
+        Masuk dengan Google
       </v-btn>
 
-      <!-- Sign Up Link -->
+      <!-- Tautan Daftar -->
       <div class="text-center mt-8 text-sm" style="color: #718096;">
-        Don't have an account?
+        Belum punya akun?
         <router-link
           to="/register"
           class="ml-1 font-semibold hover:underline"
           style="color: #1DA88B;"
         >
-          Sign up
+          Daftar sekarang
         </router-link>
       </div>
     </v-card>
@@ -161,14 +161,16 @@
 
 <script setup>
 import { ref } from 'vue'
-// import { useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
+import { useCryptoStore } from '../store/cryptoStore'
 import AuthLayout from '../layouts/AuthLayout.vue'
 
-// const router = useRouter()
+const router = useRouter()
 const authStore = useAuthStore()
+const cryptoStore = useCryptoStore()
 
-// Form state (like useState in React)
+// State formulir
 const formData = ref({
   email: '',
   password: ''
@@ -176,27 +178,39 @@ const formData = ref({
 const showPassword = ref(false)
 const rememberMe = ref(false)
 
-// Validation rules
+// Aturan validasi
 const rules = {
-  required: (v) => !!v || 'This field is required',
-  email: (v) => /.+@.+\..+/.test(v) || 'Please enter a valid email'
+  required: (v) => !!v || 'Field ini wajib diisi',
+  email: (v) => /.+@.+\..+/.test(v) || 'Harap masukkan email yang valid'
 }
 
-// Handle form submission
+// Menangani pengiriman formulir
 async function handleSubmit() {
+  console.log('Mencoba login untuk:', formData.value.email);
+  
   try {
-    await authStore.login({
+    const response = await authStore.login({
       email: formData.value.email,
       password: formData.value.password
     })
     
-    // On success, redirect to contacts (we'll create this later)
-    // For now, just show success
-    alert('Login successful! (Redirect to chat page will be implemented later)')
-    // router.push('/contacts')  // Will enable when router is imported
+    console.log('Login berhasil, respons API:', response);
+
+    // Inisialisasi kunci privat setelah login berhasil (Phase 5.2)
+    if (response && response.crypto) {
+      console.log('Mendekripsi kunci privat menggunakan password...');
+      await cryptoStore.decryptPrivateKey(
+        formData.value.password, 
+        response.crypto.encryptedPrivateKey,
+        response.crypto.kdf.salt,
+        response.crypto.kdf.iterations
+      )
+      console.log('Kunci privat berhasil dimuat ke memori.');
+    }
+
+    router.push('/chat')
   } catch (error) {
-    // Error is already handled by the store
-    console.error('Login failed:', error)
+    console.error('Login gagal di View:', error.message)
   }
 }
 </script>
