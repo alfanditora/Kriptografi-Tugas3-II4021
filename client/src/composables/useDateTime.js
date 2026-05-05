@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 export function useDateTime() {
   const now = ref(new Date())
 
-  // Update current time every minute
+  // Memperbarui waktu sekarang setiap menit
   let interval = null
 
   const start = () => {
@@ -20,24 +20,24 @@ export function useDateTime() {
     }
   }
 
-  // Format date for display
+  // Memformat tanggal untuk tampilan
   const formatDate = (date) => {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('id-ID', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     }).format(date)
   }
 
-  // Format time for display
+  // Memformat waktu untuk tampilan
   const formatTime = (date) => {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('id-ID', {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date)
   }
 
-  // Format for message timestamp (e.g., "2:30 PM" or "Yesterday")
+  // Memformat timestamp pesan (misal: "14:30" atau "Kemarin")
   const formatMessageTime = (date) => {
     const dateObj = new Date(date)
     const today = new Date()
@@ -47,13 +47,13 @@ export function useDateTime() {
     if (dateObj.toDateString() === today.toDateString()) {
       return formatTime(dateObj)
     } else if (dateObj.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday'
+      return 'Kemarin'
     } else {
       return formatDate(dateObj)
     }
   }
 
-  // ISO string for API
+  // String ISO untuk API
   const toISOString = (date) => {
     return new Date(date).toISOString()
   }

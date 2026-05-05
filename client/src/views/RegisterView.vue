@@ -210,17 +210,18 @@
 
 <script setup>
 import { ref } from 'vue'
-// import { useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
+import { useCryptoStore } from '../store/cryptoStore'
+import * as crypto from '../services/crypto'
 import AuthLayout from '../layouts/AuthLayout.vue'
 
-// const router = useRouter()
+const router = useRouter()
 const authStore = useAuthStore()
+const cryptoStore = useCryptoStore()
 
-// Form state
+// State formulir
 const formData = ref({
-  firstName: '',
-  lastName: '',
   email: '',
   password: '',
   confirmPassword: ''
@@ -228,35 +229,73 @@ const formData = ref({
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-// Validation rules
+// Aturan validasi
 const rules = {
-  required: (v) => !!v || 'This field is required',
-  email: (v) => /.+@.+\..+/.test(v) || 'Please enter a valid email',
-  minLength: (v) => v.length >= 8 || 'Password must be at least 8 characters',
-  matchPassword: (v) => v === formData.value.password || 'Passwords do not match'
+  required: (v) => !!v || 'Field ini wajib diisi',
+  email: (v) => /.+@.+\..+/.test(v) || 'Harap masukkan email yang valid',
+  minLength: (v) => v.length >= 8 || 'Kata sandi minimal 8 karakter',
+  matchPassword: (v) => v === formData.value.password || 'Kata sandi tidak cocok'
 }
 
-// Handle form submission
+// Menangani pengiriman formulir
 async function handleSubmit() {
-  // Check if passwords match
   if (formData.value.password !== formData.value.confirmPassword) {
+    console.error('Password tidak cocok');
     return
   }
 
+  console.log('Memulai proses registrasi untuk:', formData.value.email);
+
   try {
-    await authStore.register({
-      firstName: formData.value.firstName,
-      lastName: formData.value.lastName,
+    // Siapkan data kriptografi (Phase 5.1)
+    console.log('Men-generate key pair dan mengenkripsi private key...');
+    const cryptoData = await crypto.prepareRegistrationData(
+      formData.value.email,
+      formData.value.password
+    )
+    console.log('Data kriptografi siap.');
+
+    // Susun payload sesuai API & Table Schema.md
+    const payload = {
       email: formData.value.email,
-      password: formData.value.password
-      // Note: Crypto operations (ECDH key generation, AES encryption)
-      // will be added here later per the assignment requirements
-    })
-    
-    alert('Registration successful! (Redirect to chat page will be implemented later)')
-    // router.push('/contacts')  // Will enable when router is imported
+      password: formData.value.password,
+      crypto: {
+        publicKey: {
+          kty: "OKP",
+          crv: "X25519",
+          x: crypto.arrayBufferToBase64(cryptoData.publicKey)
+        },
+        encryptedPrivateKey: {
+          ciphertext: crypto.arrayBufferToBase64(cryptoData.encryptedPrivateKey),
+          iv: crypto.arrayBufferToBase64(cryptoData.iv),
+          alg: "AES-256-CBC"
+        },
+        kdf: {
+          name: "PBKDF2",
+          hash: "SHA-256",
+          salt: crypto.arrayBufferToBase64(cryptoData.kdfSalt),
+          iterations: cryptoData.kdfIterations
+        }
+      }
+    }
+
+    console.log('Mengirim payload registrasi ke mock API...');
+    await authStore.register(payload)
+    console.log('Registrasi berhasil.');
+
+    // Inisialisasi kunci privat agar isInitialized menjadi true (Phase 5.1)
+    console.log('Menyiapkan kunci privat untuk sesi ini...');
+    await cryptoStore.decryptPrivateKey(
+      formData.value.password,
+      payload.crypto.encryptedPrivateKey,
+      payload.crypto.kdf.salt,
+      payload.crypto.kdf.iterations
+    )
+    console.log('Kunci privat siap di memori.');
+
+    router.push('/contacts')
   } catch (error) {
-    console.error('Registration failed:', error)
+    console.error('Registrasi gagal di View:', error.message)
   }
 }
 </script>

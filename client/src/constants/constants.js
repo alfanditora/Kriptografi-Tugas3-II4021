@@ -1,8 +1,8 @@
-// App Constants
+// Konstanta Aplikasi
 
 export const APP_NAME = 'SEChatbox'
 
-// API Endpoints - Aligned with backend spec
+// Endpoint API - Disesuaikan dengan spesifikasi backend
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
@@ -22,38 +22,38 @@ export const API_ENDPOINTS = {
   }
 }
 
-// Crypto Constants - Aligned with backend spec
+// Konstanta Kriptografi - Disesuaikan dengan spesifikasi backend
 export const CRYPTO = {
-  // ECDH curve for key exchange
+  // Kurva ECDH untuk pertukaran kunci
   ECDH_CURVE: 'X25519',
   
-  // AES-256-CBC for private key encryption and message encryption
+  // AES-256-CBC untuk enkripsi kunci privat dan enkripsi pesan
   AES_ALGORITHM: 'AES-CBC',
   AES_KEY_SIZE: 256,
-  AES_IV_LENGTH: 16, // CBC uses 16-byte IV
+  AES_IV_LENGTH: 16, // CBC menggunakan IV 16-byte
   
-  // PBKDF2 settings for password-to-key derivation
+  // Pengaturan PBKDF2 untuk derivasi kunci dari password
   PBKDF2_ALGORITHM: 'PBKDF2',
   PBKDF2_HASH: 'SHA-256',
   PBKDF2_ITERATIONS: 100000,
-  PBKDF2_SALT_LENGTH: 16, // 128 bits
+  PBKDF2_SALT_LENGTH: 16, // 128 bit
   
-  // HKDF settings for shared secret → AES key
+  // Pengaturan HKDF untuk shared secret → kunci AES
   HKDF_HASH: 'SHA-256',
   
-  // HMAC settings for message authentication (bonus)
+  // Pengaturan HMAC untuk autentikasi pesan (bonus)
   HMAC_ALGORITHM: 'HMAC',
   HMAC_HASH: 'SHA-256'
 }
 
-// Storage Keys
+// Kunci Penyimpanan (Storage Keys)
 export const STORAGE_KEYS = {
   TOKEN: 'token',
   USER: 'user',
-  PRIVATE_KEY: 'private_key_decrypted' // Stores decrypted key for session
+  PRIVATE_KEY: 'private_key_decrypted' // Menyimpan kunci hasil dekripsi untuk sesi ini
 }
 
-// Validation
+// Validasi
 export const VALIDATION = {
   MIN_PASSWORD_LENGTH: 8,
   MAX_PASSWORD_LENGTH: 128

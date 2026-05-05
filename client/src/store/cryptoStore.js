@@ -16,6 +16,9 @@ export const useCryptoStore = defineStore('crypto', {
   }),
 
   actions: {
+
+    
+    
     /**
      * Menghasilkan pasangan kunci ECDH X25519 baru.
      */
@@ -79,6 +82,7 @@ export const useCryptoStore = defineStore('crypto', {
 
     /**
      * Menghitung kunci enkripsi dan MAC untuk percakapan dengan pengguna lain.
+     * Menggunakan HKDF untuk menurunkan kedua kunci dari shared secret yang sama.
      */
     async computeSharedSecret(otherUserPublicKeyBase64, otherUserId) {
       if (this.sharedSecrets[otherUserId]) return this.sharedSecrets[otherUserId];
@@ -86,14 +90,14 @@ export const useCryptoStore = defineStore('crypto', {
       // Impor kunci publik lawan bicara
       const otherPubKeyBuffer = crypto.base64ToArrayBuffer(otherUserPublicKeyBase64);
       const otherPubKey = await crypto.importPublicKey(otherPubKeyBuffer);
-      
+
       // Turunkan shared secret melalui ECDH
       const sharedSecret = await crypto.deriveSharedSecret(this.privateKey, otherPubKey);
-      
-      // Gunakan HKDF untuk menghasilkan kunci AES dan kunci HMAC (Bonus)
-      const salt = new ArrayBuffer(32); // Bisa dikembangkan menggunakan salt spesifik
-      const aesKey = await crypto.deriveKeyFromSharedSecret(sharedSecret, salt, "encryption");
-      const hmacKey = await crypto.generateKey(); // Idealnya diturunkan juga melalui HKDF
+
+      // Gunakan HKDF untuk menghasilkan kunci AES dan kunci HMAC dengan info yang berbeda
+      const salt = new ArrayBuffer(32); // Zero-filled salt for deterministic derivation
+      const infoPrefix = `${this.publicKey}-${otherUserPublicKeyBase64}`;
+      const { aesKey, hmacKey } = await crypto.deriveChatKeys(sharedSecret, salt, infoPrefix);
 
       this.sharedSecrets[otherUserId] = { aesKey, hmacKey };
       return this.sharedSecrets[otherUserId];

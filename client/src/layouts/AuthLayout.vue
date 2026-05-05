@@ -16,5 +16,7 @@
 </template>
 
 <script setup>
-// AuthLayout provides consistent layout for login/register pages
+/**
+ * AuthLayout menyediakan tata letak yang konsisten untuk halaman login dan registrasi.
+ */
 </script>

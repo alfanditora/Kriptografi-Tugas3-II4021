@@ -161,14 +161,16 @@
 
 <script setup>
 import { ref } from 'vue'
-// import { useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
+import { useCryptoStore } from '../store/cryptoStore'
 import AuthLayout from '../layouts/AuthLayout.vue'
 
-// const router = useRouter()
+const router = useRouter()
 const authStore = useAuthStore()
+const cryptoStore = useCryptoStore()
 
-// Form state (like useState in React)
+// State formulir
 const formData = ref({
   email: '',
   password: ''
@@ -176,27 +178,41 @@ const formData = ref({
 const showPassword = ref(false)
 const rememberMe = ref(false)
 
-// Validation rules
+// Aturan validasi
 const rules = {
-  required: (v) => !!v || 'This field is required',
-  email: (v) => /.+@.+\..+/.test(v) || 'Please enter a valid email'
+  required: (v) => !!v || 'Field ini wajib diisi',
+  email: (v) => /.+@.+\..+/.test(v) || 'Harap masukkan email yang valid'
 }
 
-// Handle form submission
+// Menangani pengiriman formulir
 async function handleSubmit() {
+  console.log('Mencoba login untuk:', formData.value.email);
+  
   try {
-    await authStore.login({
+    const response = await authStore.login({
       email: formData.value.email,
       password: formData.value.password
     })
     
-    // On success, redirect to contacts (we'll create this later)
-    // For now, just show success
-    alert('Login successful! (Redirect to chat page will be implemented later)')
-    // router.push('/contacts')  // Will enable when router is imported
+    console.log('Login berhasil, respons API:', response);
+
+    // Inisialisasi kunci privat setelah login berhasil (Phase 5.2)
+    if (response && response.crypto) {
+      console.log('Mendekripsi kunci privat menggunakan password...');
+      // Memanggil fungsi yang benar di cryptoStore
+      await cryptoStore.decryptPrivateKey(
+        formData.value.password, 
+        response.crypto.encryptedPrivateKey,
+        response.crypto.kdf.salt,
+        response.crypto.kdf.iterations
+      )
+      console.log('Kunci privat berhasil dimuat ke memori.');
+    }
+
+    router.push('/contacts')
   } catch (error) {
-    // Error is already handled by the store
-    console.error('Login failed:', error)
+    console.error('Login gagal di View:', error.message)
   }
 }
 </script>
+
