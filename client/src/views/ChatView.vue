@@ -112,8 +112,54 @@
                 </span>
               </div>
             </div>
-            <v-btn icon="mdi-magnify" variant="text" color="#718096"></v-btn>
-            <v-btn icon="mdi-dots-vertical" variant="text" color="#718096"></v-btn>
+            <!-- Tombol Cari / Input Cari -->
+            <template v-if="!showMessageSearch">
+              <v-btn icon="mdi-magnify" variant="text" color="#718096" @click="openMessageSearch"></v-btn>
+            </template>
+            <template v-else>
+              <div class="d-flex align-center bg-grey-lighten-4 rounded-lg px-3 py-1 mr-2" style="min-width: 280px;">
+                <v-text-field
+                  v-model="messageSearchQuery"
+                  placeholder="Cari pesan..."
+                  variant="plain"
+                  density="compact"
+                  hide-details
+                  autofocus
+                  @keyup.enter="nextSearchResult"
+                  class="search-input"
+                  style="min-width: 150px;"
+                ></v-text-field>
+                <span v-if="searchMatches.length > 0" class="text-caption mx-2" style="color: #718096;">
+                  {{ currentMatchIndex + 1 }}/{{ searchMatches.length }}
+                </span>
+                <span v-else-if="messageSearchQuery" class="text-caption mx-2" style="color: #718096;">
+                  0/0
+                </span>
+                <v-btn
+                  icon="mdi-chevron-up"
+                  variant="text"
+                  size="small"
+                  density="compact"
+                  :disabled="searchMatches.length === 0"
+                  @click="prevSearchResult"
+                ></v-btn>
+                <v-btn
+                  icon="mdi-chevron-down"
+                  variant="text"
+                  size="small"
+                  density="compact"
+                  :disabled="searchMatches.length === 0"
+                  @click="nextSearchResult"
+                ></v-btn>
+                <v-btn
+                  icon="mdi-close"
+                  variant="text"
+                  size="small"
+                  density="compact"
+                  @click="closeMessageSearch"
+                ></v-btn>
+              </div>
+            </template>
           </div>
 
           <!-- Pesan -->
@@ -122,13 +168,13 @@
             class="flex-grow-1 pa-6 overflow-y-auto d-flex flex-column messages-area"
             style="background-color: #F7F9FC;"
           >
-            <!-- Status Memuat -->
+            <!-- Status Loading -->
             <div v-if="!isEncrypted" class="fill-height d-flex flex-column align-center justify-center">
               <v-progress-circular indeterminate color="#1DA88B" size="48"></v-progress-circular>
               <span class="mt-4 text-body-2" style="color: #718096;">Menyiapkan kunci aman...</span>
             </div>
 
-            <!-- Daftar Pesan -->
+            <!-- List Messages -->
             <template v-else>
               <div v-if="messages.length === 0" class="fill-height d-flex flex-column align-center justify-center opacity-50">
                 <v-icon icon="mdi-message-outline" size="48" class="mb-2"></v-icon>
@@ -139,9 +185,12 @@
                 v-for="message in messages"
                 :key="message.id"
                 class="d-flex mb-4"
-                :class="message.isMe ? 'justify-end' : 'justify-start'"
+                :class="[
+                  message.isMe ? 'justify-end' : 'justify-start',
+                  highlightedMessageId === message.id ? 'highlighted-message' : ''
+                ]"
               >
-                <!-- Avatar lawan bicara (hanya jika bukan saya) -->
+                <!-- Avatar lawan bicara (hanya jika bukan diri sendiri) -->
                 <v-avatar v-if="!message.isMe" size="32" class="mr-2 align-self-end mb-1" color="#DFF1EE">
                    <v-icon icon="mdi-account" size="18" color="#1DA88B"></v-icon>
                 </v-avatar>
@@ -151,9 +200,13 @@
                     :color="message.isMe ? '#1DA88B' : 'white'"
                     class="pa-4 rounded-xl"
                     elevation="0"
-                    :style="message.isMe ? 'color: white;' : 'color: #2D3748; border: 1px solid #EDF2F7;'"
+                    :style="[
+                      message.isMe ? 'color: white;' : 'color: #2D3748; border: 1px solid #EDF2F7;',
+                      highlightedMessageId === message.id ? 'box-shadow: 0 0 0 3px #FFD700 !important;' : ''
+                    ]"
+                    :id="'msg-' + message.id"
                   >
-                    <div class="text-body-2">{{ message.text }}</div>
+                    <div class="text-body-2" v-html="highlightSearchTerms(message.text)"></div>
                   </v-card>
                   <div class="d-flex align-center mt-1 px-1">
                     <span class="text-caption" style="color: #A0AEC0;">
@@ -179,7 +232,7 @@
             </template>
           </div>
 
-          <!-- Input Obrolan -->
+          <!-- Input Chat -->
           <div class="pa-4 border-top" style="background-color: white;">
             <div class="d-flex align-center bg-grey-lighten-4 rounded-pill px-4 py-2">
               
@@ -195,7 +248,7 @@
                 </v-card>
               </v-menu>
 
-              <v-btn icon="mdi-plus" variant="text" color="#718096" density="comfortable" class="mr-2"></v-btn>
+              <!-- <v-btn icon="mdi-plus" variant="text" color="#718096" density="comfortable" class="mr-2"></v-btn> -->
               
               <v-text-field
                 ref="messageInput"
@@ -271,6 +324,13 @@ const commonEmojis = ['😀', '😂', '😍', '👍', '🙏', '🔥', '😊', '�
 // State UI
 const showError = ref(false)
 const errorMessage = ref('')
+
+// State Pencarian Pesan
+const showMessageSearch = ref(false)
+const messageSearchQuery = ref('')
+const searchMatches = ref([])
+const currentMatchIndex = ref(0)
+const highlightedMessageId = ref(null)
 
 // Kunci kriptografi sesi aktif
 let aesKey = null
@@ -456,6 +516,113 @@ function scrollToBottom() {
 function formatTime(date) {
   if (!date) return ''
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+// Fungsi Pencarian Pesan
+function openMessageSearch() {
+  showMessageSearch.value = true
+  messageSearchQuery.value = ''
+  searchMatches.value = []
+  currentMatchIndex.value = 0
+  highlightedMessageId.value = null
+}
+
+function closeMessageSearch() {
+  showMessageSearch.value = false
+  messageSearchQuery.value = ''
+  searchMatches.value = []
+  currentMatchIndex.value = 0
+  highlightedMessageId.value = null
+}
+
+// Pantau perubahan query pencarian
+watch(messageSearchQuery, (query) => {
+  if (!query.trim()) {
+    searchMatches.value = []
+    currentMatchIndex.value = 0
+    highlightedMessageId.value = null
+    return
+  }
+
+  // Cari semua pesan yang cocok
+  const matches = []
+  const lowerQuery = query.toLowerCase()
+
+  messages.value.forEach((message, index) => {
+    if (message.text.toLowerCase().includes(lowerQuery)) {
+      matches.push({
+        messageIndex: index,
+        messageId: message.id
+      })
+    }
+  })
+
+  searchMatches.value = matches
+  currentMatchIndex.value = matches.length > 0 ? 0 : -1
+
+  if (matches.length > 0) {
+    highlightedMessageId.value = matches[0].messageId
+    scrollToMessage(matches[0].messageId)
+  }
+})
+
+function nextSearchResult() {
+  if (searchMatches.value.length === 0) return
+
+  currentMatchIndex.value = (currentMatchIndex.value + 1) % searchMatches.value.length
+  const match = searchMatches.value[currentMatchIndex.value]
+  highlightedMessageId.value = match.messageId
+  scrollToMessage(match.messageId)
+}
+
+function prevSearchResult() {
+  if (searchMatches.value.length === 0) return
+
+  currentMatchIndex.value = currentMatchIndex.value === 0
+    ? searchMatches.value.length - 1
+    : currentMatchIndex.value - 1
+  const match = searchMatches.value[currentMatchIndex.value]
+  highlightedMessageId.value = match.messageId
+  scrollToMessage(match.messageId)
+}
+
+function scrollToMessage(messageId) {
+  nextTick(() => {
+    const element = document.getElementById(`msg-${messageId}`)
+    if (element && messagesContainer.value) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
+}
+
+function highlightSearchTerms(text) {
+  if (!messageSearchQuery.value.trim() || !showMessageSearch.value) {
+    return escapeHtml(text)
+  }
+
+  const query = messageSearchQuery.value.trim()
+  const lowerText = text.toLowerCase()
+  const lowerQuery = query.toLowerCase()
+
+  if (!lowerText.includes(lowerQuery)) {
+    return escapeHtml(text)
+  }
+
+  // Split text by search term and highlight
+  const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi')
+  const highlighted = text.replace(regex, '<mark style="background-color: #FFD700; color: #000; padding: 1px 2px; border-radius: 2px;">$1</mark>')
+
+  return highlighted
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 </script>
 
