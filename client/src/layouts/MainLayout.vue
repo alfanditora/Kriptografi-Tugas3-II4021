@@ -51,7 +51,7 @@
       </v-container>
     </v-main>
 
-    <!-- Unlock Modal Overlay -->
+    <!-- Overlay Modal Buka Kunci -->
     <v-dialog
       v-model="unlockModal.showModal.value"
       persistent
@@ -124,7 +124,7 @@ const authStore = useAuthStore()
 const router = useRouter()
 const unlockModal = useUnlockModal()
 
-// Cek apakah perlu unlock saat layout dimuat (setelah refresh)
+// Memeriksa status kunci saat layout dimuat
 onMounted(() => {
   unlockModal.checkAndShow()
 })

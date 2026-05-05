@@ -1,6 +1,6 @@
 <template>
   <MainLayout>
-    <v-row no-gutters class="rounded-xl overflow-hidden dashboard-container" style="border: 1px solid #DFE2F1; background: white;">
+    <v-row class="ga-0 rounded-xl overflow-hidden dashboard-container" style="border: 1px solid #DFE2F1; background: white;">
       
       <!-- Sidebar Kiri: Daftar Kontak/Percakapan -->
       <v-col cols="12" md="4" lg="3" class="sidebar-border fill-height d-flex flex-column" style="background-color: white;">
@@ -29,7 +29,7 @@
           </v-card>
         </div>
 
-        <!-- Search Bar -->
+        <!-- Bilah Pencarian -->
         <div class="px-6 mb-4">
           <v-text-field
             v-model="search"
@@ -54,7 +54,7 @@
               :active="String(contact.id) === String(selectedUserId)"
               @click="selectUser(contact)"
               class="rounded-xl mx-2 mb-1 pa-3"
-              active-color="#1DA88B"
+              color="#1DA88B"
               :style="String(contact.id) === String(selectedUserId) ? 'background-color: #DFF1EE !important;' : ''"
             >
               <template v-slot:prepend>
@@ -81,7 +81,7 @@
       <!-- Panel Kanan: Area Obrolan -->
       <v-col cols="12" md="8" lg="9" class="d-flex flex-column fill-height" style="background-color: white;">
         
-        <!-- Welcome Screen (Jika belum pilih user) -->
+        <!-- Layar Selamat Datang (Jika belum pilih user) -->
         <div v-if="!selectedUserId" class="fill-height d-flex flex-column align-center justify-center text-center pa-12" style="background-color: #F7F9FC;">
           <v-icon icon="mdi-shield-lock-outline" size="120" color="#CBD5E0" class="mb-6"></v-icon>
           <h2 class="text-h4 font-weight-bold mb-2" style="color: #2D3748;">SEChatbox</h2>
@@ -132,7 +132,7 @@
             <template v-else>
               <div v-if="messages.length === 0" class="fill-height d-flex flex-column align-center justify-center opacity-50">
                 <v-icon icon="mdi-message-outline" size="48" class="mb-2"></v-icon>
-                <span>Belum ada pesan. Say hello!</span>
+                <span>Belum ada pesan. Sapa mereka!</span>
               </div>
               
               <div
@@ -141,6 +141,7 @@
                 class="d-flex mb-4"
                 :class="message.isMe ? 'justify-end' : 'justify-start'"
               >
+                <!-- Avatar lawan bicara (hanya jika bukan saya) -->
                 <v-avatar v-if="!message.isMe" size="32" class="mr-2 align-self-end mb-1" color="#DFF1EE">
                    <v-icon icon="mdi-account" size="18" color="#1DA88B"></v-icon>
                 </v-avatar>
@@ -252,7 +253,7 @@ const contacts = ref([])
 const search = ref('')
 const selectedUserId = computed(() => route.params.userId)
 
-// Objek kontak aktif (instan sinkron dengan sidebar)
+// Objek kontak aktif
 const activeContact = computed(() => {
   return contacts.value.find(c => String(c.id) === String(selectedUserId.value))
 })
@@ -275,7 +276,7 @@ const errorMessage = ref('')
 let aesKey = null
 let hmacKey = null
 
-// Filter kontak berdasarkan search bar
+// Filter kontak berdasarkan bilah pencarian
 const filteredContacts = computed(() => {
   if (!search.value) return contacts.value
   return contacts.value.filter(c => 
@@ -285,13 +286,13 @@ const filteredContacts = computed(() => {
 
 onMounted(async () => {
   await loadContacts()
-  // Hanya setup chat jika crypto sudah diinisialisasi (private key tersedia)
+  // Hanya setup chat jika kunci privat tersedia
   if (selectedUserId.value && cryptoStore.isInitialized) {
     await setupChat()
   }
 })
 
-// Pantau perubahan parameter URL untuk ganti chat
+// Pantau perubahan parameter URL
 watch(() => selectedUserId.value, async (newId) => {
   if (newId && cryptoStore.isInitialized) {
     await setupChat()
@@ -301,10 +302,9 @@ watch(() => selectedUserId.value, async (newId) => {
   }
 })
 
-// Pantau ketika crypto store menjadi initialized (setelah unlock)
+// Pantau status inisialisasi kunci
 watch(() => cryptoStore.isInitialized, async (initialized) => {
   if (initialized && selectedUserId.value) {
-    // Setelah unlock, langsung setup chat jika ada user yang dipilih
     await setupChat()
   }
 })
@@ -421,7 +421,7 @@ async function sendMessage() {
     newMessage.value = ''
     scrollToBottom()
 
-    // Fokus kembali ke input setelah kirim
+    // Fokus kembali ke input
     nextTick(() => {
       messageInput.value?.focus()
     })
@@ -440,7 +440,6 @@ function selectUser(contact) {
 
 function addEmoji(emoji) {
   newMessage.value += emoji
-  // Kembalikan fokus ke input setelah pilih emoji
   nextTick(() => {
     messageInput.value?.focus()
   })
@@ -466,7 +465,7 @@ function formatTime(date) {
 }
 
 .messages-area {
-  height: 0; /* Memaksa flex-grow dan overflow-y bekerja */
+  height: 0;
 }
 
 .sidebar-border {
@@ -508,7 +507,7 @@ function formatTime(date) {
   color: #E2E8F0 !important;
 }
 
-/* Scrollbar styling */
+/* Penataan scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }

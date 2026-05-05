@@ -9,13 +9,13 @@
       rounded="xl"
       style="border: 1px solid #DFE2F1;"
     >
-      <!-- Logo & Header Section -->
+      <!-- Bagian Logo & Header -->
       <div class="text-center mb-8">
         <div
           class="inline-flex items-center justify-center pa-3 rounded-xl mb-4"
           style="background-color: #DFF1EE;"
         >
-          <!-- Logo Icon -->
+          <!-- Ikon Logo -->
           <v-icon
             icon="mdi-shield-lock"
             size="32"
@@ -23,14 +23,14 @@
           ></v-icon>
         </div>
         <h1 class="text-2xl font-bold mb-2" style="color: #2D3748;">
-          Create an account
+          Buat akun baru
         </h1>
         <p class="text-sm" style="color: #718096;">
-          Join SEChatbox - A Safely Encrypted box for all your chatting needs
+          Bergabung dengan SEChatbox - Kotak obrolan aman untuk semua kebutuhan Anda
         </p>
       </div>
 
-      <!-- Error Alert -->
+      <!-- Peringatan Error -->
       <v-alert
         v-if="authStore.error"
         type="error"
@@ -45,11 +45,11 @@
 
       <v-form @submit.prevent="handleSubmit" ref="form">
         <v-row dense>
-          <!-- First Name -->
+          <!-- Nama Depan -->
           <v-col cols="12" sm="6">
             <div class="mb-4">
               <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-                First Name
+                Nama Depan
               </label>
               <v-text-field
                 v-model="formData.firstName"
@@ -65,11 +65,11 @@
             </div>
           </v-col>
 
-          <!-- Last Name -->
+          <!-- Nama Belakang -->
           <v-col cols="12" sm="6">
             <div class="mb-4">
               <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-                Last Name
+                Nama Belakang
               </label>
               <v-text-field
                 v-model="formData.lastName"
@@ -89,7 +89,7 @@
         <!-- Email -->
         <div class="mb-4">
           <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-            Email Address
+            Alamat Email
           </label>
           <v-text-field
             v-model="formData.email"
@@ -105,15 +105,15 @@
           ></v-text-field>
         </div>
 
-        <!-- Password -->
+        <!-- Kata Sandi -->
         <div class="mb-4">
           <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-            Password
+            Kata Sandi
           </label>
           <v-text-field
             v-model="formData.password"
             :type="showPassword ? 'text' : 'password'"
-            placeholder="Minimum 8 characters"
+            placeholder="Minimal 8 karakter"
             :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
             @click:append-inner="showPassword = !showPassword"
             :rules="[rules.required, rules.minLength]"
@@ -126,10 +126,10 @@
           ></v-text-field>
         </div>
 
-        <!-- Confirm Password -->
+        <!-- Konfirmasi Kata Sandi -->
         <div class="mb-4">
           <label class="block text-sm font-semibold mb-1.5" style="color: #2D3748;">
-            Confirm Password
+            Konfirmasi Kata Sandi
           </label>
           <v-text-field
             v-model="formData.confirmPassword"
@@ -147,13 +147,13 @@
           ></v-text-field>
         </div>
 
-        <!-- Terms Text -->
+        <!-- Teks Persyaratan -->
         <p class="text-xs mb-6" style="color: #718096;">
-          By clicking "Create Account", you agree to our
-          <a href="#" class="hover:underline" style="color: #1DA88B;">Terms of Service</a>.
+          Dengan mengklik "Buat Akun", Anda menyetujui
+          <a href="#" class="hover:underline" style="color: #1DA88B;">Ketentuan Layanan</a> kami.
         </p>
 
-        <!-- Create Account Button -->
+        <!-- Tombol Buat Akun -->
         <v-btn
           type="submit"
           block
@@ -164,23 +164,23 @@
           style="background-color: #1DA88B; color: white;"
           elevation="0"
         >
-          Create Account
+          Buat Akun
         </v-btn>
       </v-form>
 
-      <!-- Divider -->
+      <!-- Pemisah -->
       <div class="relative my-6">
         <div class="absolute inset-0 flex items-center">
           <div class="w-full" style="border-top: 1px solid #DFE2F1;"></div>
         </div>
         <div class="relative flex justify-center text-sm">
           <span class="px-2 bg-white" style="color: #718096;">
-            Or sign up with
+            Atau daftar dengan
           </span>
         </div>
       </div>
 
-      <!-- Google Sign Up Button -->
+      <!-- Tombol Daftar Google -->
       <v-btn
         block
         size="large"
@@ -190,18 +190,18 @@
         elevation="0"
       >
         <v-icon left class="mr-2">mdi-google</v-icon>
-        Sign up with Google
+        Daftar dengan Google
       </v-btn>
 
-      <!-- Sign In Link -->
+      <!-- Tautan Masuk -->
       <div class="text-center mt-8 text-sm" style="color: #718096;">
-        Already have an account?
+        Sudah punya akun?
         <router-link
           to="/login"
           class="ml-1 font-semibold hover:underline"
           style="color: #1DA88B;"
         >
-          Sign in
+          Masuk sekarang
         </router-link>
       </div>
     </v-card>
@@ -293,7 +293,7 @@ async function handleSubmit() {
     )
     console.log('Kunci privat siap di memori.');
 
-    router.push('/contacts')
+    router.push('/chat')
   } catch (error) {
     console.error('Registrasi gagal di View:', error.message)
   }
