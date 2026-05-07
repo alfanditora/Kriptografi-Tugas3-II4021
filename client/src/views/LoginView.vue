@@ -95,13 +95,13 @@
             class="text-sm"
             style="color: #718096;"
           ></v-checkbox>
-          <a
+          <!-- <a
             href="#"
             class="text-sm font-medium hover:underline"
             style="color: #1DA88B;"
           >
             Lupa kata sandi?
-          </a>
+          </a> -->
         </div>
 
         <!-- Tombol Masuk -->
@@ -161,7 +161,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
 import { useCryptoStore } from '../store/cryptoStore'
@@ -172,12 +172,22 @@ const authStore = useAuthStore()
 const cryptoStore = useCryptoStore()
 
 // State formulir
+const form = ref(null)
 const formData = ref({
   email: '',
   password: ''
 })
 const showPassword = ref(false)
 const rememberMe = ref(false)
+
+// Ambil email yang diingat saat mount
+onMounted(() => {
+  const savedEmail = localStorage.getItem('remembered_email')
+  if (savedEmail) {
+    formData.value.email = savedEmail
+    rememberMe.value = true
+  }
+})
 
 // Aturan validasi
 const rules = {
@@ -191,13 +201,16 @@ function handleGoogleClick() {
 
 // Menangani pengiriman formulir
 async function handleSubmit() {
+  const { valid } = await form.value.validate()
+  if (!valid) return
+
   console.log('[Auth] Mencoba login untuk:', formData.value.email);
   
   try {
     const response = await authStore.login({
       email: formData.value.email,
       password: formData.value.password
-    })
+    }, rememberMe.value)
     
     console.log('[Auth] Login berhasil, token JWT diterima.');
 

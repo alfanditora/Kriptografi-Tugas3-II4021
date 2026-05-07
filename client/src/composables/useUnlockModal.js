@@ -49,11 +49,13 @@ export function useUnlockModal() {
     error.value = ''
 
     try {
-      // Ambil data dari localStorage
-      const encryptedDataStr = localStorage.getItem('encryptedPrivateKey')
-      const publicKey = localStorage.getItem('publicKey') // This is a raw base64 string
-      const salt = localStorage.getItem('kdfSalt')
-      const iterations = parseInt(localStorage.getItem('kdfIterations') || '100000')
+      // Ambil data dari localStorage atau sessionStorage
+      const getStoredItem = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
+      
+      const encryptedDataStr = getStoredItem('encryptedPrivateKey')
+      const publicKey = getStoredItem('publicKey') // This is a raw base64 string
+      const salt = getStoredItem('kdfSalt')
+      const iterations = parseInt(getStoredItem('kdfIterations') || '100000')
 
       if (!encryptedDataStr || !salt) {
         throw new Error('Data kunci tidak ditemukan. Silakan login ulang.')
@@ -69,8 +71,19 @@ export function useUnlockModal() {
         iterations
       )
 
-      // Set public key back to store
-      cryptoStore.publicKey = publicKey
+      // Pulihkan public key: Cek storage, jika tidak ada, ambil dari backend
+      if (publicKey) {
+        cryptoStore.publicKey = publicKey
+      } else if (authStore.user?.id) {
+        try {
+          const { messageApi } = await import('../api/messages')
+          const pubKeyResponse = await messageApi.getConversationCrypto(authStore.user.id)
+          cryptoStore.publicKey = pubKeyResponse.publicKey
+          localStorage.setItem('publicKey', pubKeyResponse.publicKey)
+        } catch (pubKeyErr) {
+          console.error('[Kripto] Gagal mengambil kunci publik sendiri dari server:', pubKeyErr);
+        }
+      }
 
       // Sukses - tutup modal
       hide()

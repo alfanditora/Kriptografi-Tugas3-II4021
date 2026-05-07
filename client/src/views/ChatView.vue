@@ -288,7 +288,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { messageApi } from '../api/messages'
 import { useCryptoStore } from '../store/cryptoStore'
@@ -336,6 +336,9 @@ const highlightedMessageId = ref(null)
 let aesKey = null
 let hmacKey = null
 
+// SSE Event Source untuk real-time messages
+let messageEventSource = null
+
 // Filter kontak berdasarkan bilah pencarian
 const filteredContacts = computed(() => {
   if (!search.value) return contacts.value
@@ -350,6 +353,11 @@ onMounted(async () => {
   if (selectedUserId.value && cryptoStore.isInitialized) {
     await setupChat()
   }
+})
+
+onUnmounted(() => {
+  // Clean up SSE connection
+  disconnectMessageStream()
 })
 
 // Pantau perubahan parameter URL
@@ -383,6 +391,9 @@ async function setupChat() {
   if (!selectedUserId.value) return
   if (!cryptoStore.isInitialized) return
 
+  // Disconnect from previous SSE stream
+  disconnectMessageStream()
+
   isEncrypted.value = false
   messages.value = []
   try {
@@ -397,6 +408,7 @@ async function setupChat() {
     isEncrypted.value = true
 
     await loadMessages()
+    connectToMessageStream()
     scrollToBottom()
   } catch (err) {
     console.error('Gagal setup chat:', err)
@@ -479,13 +491,24 @@ async function sendMessage() {
     const mac = await crypto.sign(text, hmacKey)
 
     console.log('[Chat] Mengirim data terenkripsi ke server...');
-    await messageApi.sendMessage({
+    const response = await messageApi.sendMessage({
       receiverId: selectedUserId.value,
       ciphertext: crypto.arrayBufferToBase64(ciphertext),
       iv: crypto.arrayBufferToBase64(iv),
       mac: crypto.arrayBufferToBase64(mac)
     })
     console.log('[Chat] Pesan berhasil dikirim.');
+
+    // Tampilkan pesan di UI secara optimistic
+    // SSE akan mengirimkan konfirmasi server dengan data lengkap
+    const messageId = response.messageId || `temp_${Date.now()}`
+    messages.value.push({
+      id: messageId,
+      text,
+      timestamp: new Date(),
+      isMe: true,
+      macVerified: true
+    })
 
     newMessage.value = ''
     scrollToBottom()
@@ -500,6 +523,114 @@ async function sendMessage() {
     errorMessage.value = 'Gagal mengirim pesan'
   } finally {
     sending.value = false
+  }
+}
+
+/**
+ * Connect to SSE stream for real-time message updates
+ */
+function connectToMessageStream() {
+  console.log('[Chat] Menghubungkan ke SSE message stream...');
+  
+  messageEventSource = messageApi.subscribeToMessageStream(
+    // onMessage callback
+    async (incomingMessage) => {
+      console.log('[Chat] Pesan baru diterima via SSE:', incomingMessage.id);
+      
+      // Only process messages from the current conversation
+      const isSender = incomingMessage.senderId === authStore.user?.id
+      const isReceiver = incomingMessage.receiverId === authStore.user?.id
+      const isCurrent = (isSender && incomingMessage.receiverId === selectedUserId.value) ||
+                        (isReceiver && incomingMessage.senderId === selectedUserId.value)
+      
+      if (!isCurrent) {
+        console.log('[Chat] Pesan dari percakapan lain, diabaikan');
+        return
+      }
+
+      try {
+        const ciphertext = crypto.base64ToArrayBuffer(incomingMessage.ciphertext)
+        const iv = crypto.base64ToArrayBuffer(incomingMessage.iv)
+        
+        console.log('[Kripto] Mendekripsi pesan SSE ID:', incomingMessage.id);
+        const decrypted = await crypto.decrypt(ciphertext, iv, aesKey)
+        const text = new TextDecoder().decode(decrypted)
+        console.log('[Kripto] Pesan SSE berhasil didekripsi.');
+
+        let macVerified = false
+        if (incomingMessage.mac && hmacKey) {
+          console.log('[Kripto] Memverifikasi integritas pesan SSE (MAC)...');
+          const macBuffer = crypto.base64ToArrayBuffer(incomingMessage.mac)
+          macVerified = await crypto.verify(text, macBuffer, hmacKey)
+          
+          if (macVerified) {
+            console.log('[Kripto] Verifikasi MAC SSE sukses: Pesan asli dan autentik.');
+          } else {
+            console.warn('[Kripto] Verifikasi MAC SSE GAGAL: Pesan mungkin telah dimanipulasi!');
+          }
+        }
+
+        // Check if message already exists (to avoid duplicates)
+        const existingIndex = messages.value.findIndex(m => m.id === incomingMessage.id)
+        
+        const processedMessage = {
+          id: incomingMessage.id,
+          text,
+          timestamp: new Date(incomingMessage.createdAt),
+          isMe: isSender,
+          macVerified
+        }
+
+        if (existingIndex >= 0) {
+          // Update existing message (e.g., replace temp ID with real ID)
+          messages.value[existingIndex] = processedMessage
+          console.log('[Chat] Pesan diperbarui dengan data server');
+        } else {
+          // Add new message
+          messages.value.push(processedMessage)
+          console.log('[Chat] Pesan baru ditambahkan ke list');
+        }
+
+        scrollToBottom()
+      } catch (err) {
+        console.error('[Chat] Gagal memproses pesan SSE:', err);
+        
+        // Still add the message but mark as error
+        const existingIndex = messages.value.findIndex(m => m.id === incomingMessage.id)
+        const errorMessage = {
+          id: incomingMessage.id,
+          text: '[Dekripsi gagal]',
+          timestamp: new Date(incomingMessage.createdAt),
+          isMe: incomingMessage.senderId === authStore.user?.id,
+          macVerified: false,
+          error: true
+        }
+        
+        if (existingIndex >= 0) {
+          messages.value[existingIndex] = errorMessage
+        } else {
+          messages.value.push(errorMessage)
+        }
+        scrollToBottom()
+      }
+    },
+    // onError callback
+    (error) => {
+      console.error('[Chat] SSE stream error:', error);
+      showError.value = true
+      errorMessage.value = 'Koneksi real-time terputus. Coba refresh halaman.'
+    }
+  )
+}
+
+/**
+ * Disconnect from SSE stream
+ */
+function disconnectMessageStream() {
+  if (messageEventSource) {
+    console.log('[Chat] Memutuskan SSE message stream...');
+    messageEventSource.close()
+    messageEventSource = null
   }
 }
 

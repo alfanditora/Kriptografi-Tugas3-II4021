@@ -1,4 +1,5 @@
 import uuid
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
@@ -9,6 +10,8 @@ import asyncio
 from app.database import get_db
 from app import crud, schemas, models
 from security.dependencies import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["Messages"])
 
@@ -46,22 +49,31 @@ async def send_message(
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
+    logger.info(f"[MESSAGE] Send message request from {current_user.email}")
+    logger.info(f"[MESSAGE] Receiver ID: {message_data.receiver_id}")
+    logger.info(f"[MESSAGE] Ciphertext length: {len(message_data.ciphertext) if hasattr(message_data, 'ciphertext') else 'N/A'}")
 
     receiver = crud.get_user_by_id(db, message_data.receiver_id)
     if not receiver:
+        logger.warning(f"[MESSAGE] Receiver not found: {message_data.receiver_id}")
         raise HTTPException(status_code=404, detail="Receiver not found")
 
+    logger.info(f"[MESSAGE] Receiver found: {receiver.email}")
     new_msg = crud.create_message(
         db=db, 
         message=message_data, 
         sender_id=current_user.id
     )
+    logger.info(f"[MESSAGE] Message created with ID: {new_msg.id}")
     
     # Broadcast to receiver and sender via SSE
     msg_data = schemas.MessageResponse.model_validate(new_msg)
     json_msg = jsonable_encoder(msg_data, by_alias=True)
+    logger.info(f"[MESSAGE] Broadcasting to receiver {receiver.id}")
     await manager.broadcast(receiver.id, json_msg)
+    logger.info(f"[MESSAGE] Broadcasting to sender {current_user.id}")
     await manager.broadcast(current_user.id, json_msg)
+    logger.info(f"[MESSAGE] Broadcast complete")
     
     return {"messageId": str(new_msg.id)}
 
@@ -71,36 +83,55 @@ async def message_stream(
     request: Request,
     current_user: models.User = Depends(get_current_user)
 ):
-    q = manager.connect(current_user.id)
+    logger.info(f"[SSE] Stream connection requested by user: {current_user.email}")
+    logger.info(f"[SSE] Client IP: {request.client}")
+    logger.info(f"[SSE] Request headers: {dict(request.headers)}")
+    
+    try:
+        q = manager.connect(current_user.id)
+        logger.info(f"[SSE] Connected user {current_user.email} to message queue")
+        logger.info(f"[SSE] Active connections: {list(manager.active_connections.keys())}")
 
-    async def event_generator():
-        try:
-            while True:
-                if await request.is_disconnected():
-                    break
-                
-                try:
-                    message = await asyncio.wait_for(q.get(), timeout=1.0)
-                    import json
-                    yield {"data": json.dumps(message)}
-                except asyncio.TimeoutError:
-                    pass
-        finally:
-            manager.disconnect(current_user.id, q)
+        async def event_generator():
+            logger.info(f"[SSE] Event generator started for user {current_user.id}")
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        logger.info(f"[SSE] Client disconnected: {current_user.email}")
+                        break
+                    
+                    try:
+                        message = await asyncio.wait_for(q.get(), timeout=1.0)
+                        logger.debug(f"[SSE] Message received for {current_user.email}: {message}")
+                        import json
+                        yield {"data": json.dumps(message)}
+                    except asyncio.TimeoutError:
+                        logger.debug(f"[SSE] Timeout waiting for message for {current_user.email}")
+                        pass
+            except Exception as e:
+                logger.error(f"[SSE] Error in event generator: {type(e).__name__}: {e}", exc_info=True)
+            finally:
+                logger.info(f"[SSE] Disconnecting user {current_user.email}")
+                manager.disconnect(current_user.id, q)
+                logger.info(f"[SSE] Active connections after disconnect: {list(manager.active_connections.keys())}")
 
-    return EventSourceResponse(event_generator())
+        logger.info(f"[SSE] Returning EventSourceResponse for {current_user.email}")
+        return EventSourceResponse(event_generator())
+    except Exception as e:
+        logger.error(f"[SSE] Error setting up stream: {type(e).__name__}: {e}", exc_info=True)
+        raise
 
 # Get chat history
-@router.get("/messages/{user_id}", response_model=List[schemas.MessageResponse])
+@router.get("/messages/{user_id:uuid}", response_model=List[schemas.MessageResponse])
 def get_chat_history(
-    user_id: str, 
+    user_id: uuid.UUID, 
     db: Session = Depends(get_db), 
     current_user: models.User = Depends(get_current_user)
 ):
-    try:
-        target_uuid = uuid.UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid user ID format")
+    # if not isinstance(user_id, uuid.UUID):
+    #     raise HTTPException(status_code=400, detail="Invalid user ID format")
+    
+    target_uuid = user_id
 
     messages = crud.get_messages_by_user(db, current_user.id, target_uuid)
     return messages

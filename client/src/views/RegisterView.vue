@@ -222,6 +222,7 @@ const authStore = useAuthStore()
 const cryptoStore = useCryptoStore()
 
 // State formulir
+const form = ref(null)
 const formData = ref({
   email: '',
   password: '',
@@ -244,10 +245,8 @@ function handleGoogleClick() {
 
 // Menangani pengiriman formulir
 async function handleSubmit() {
-  if (formData.value.password !== formData.value.confirmPassword) {
-    console.error('[Auth] Password tidak cocok');
-    return
-  }
+  const { valid } = await form.value.validate()
+  if (!valid) return
 
   console.log('[Auth] Memulai proses registrasi untuk:', formData.value.email);
 

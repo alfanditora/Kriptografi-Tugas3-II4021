@@ -7,8 +7,13 @@ import { useCryptoStore } from './cryptoStore'
  * Store untuk mengelola status autentikasi pengguna.
  */
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
-  const token = ref(localStorage.getItem('token') || null)
+  // Cek token di localStorage (persistent) atau sessionStorage (non-persistent)
+  const token = ref(localStorage.getItem('token') || sessionStorage.getItem('token') || null)
+  
+  // Ambil user data
+  const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user')
+  const user = ref(storedUser ? JSON.parse(storedUser) : null)
+  
   const loading = ref(false)
   const error = ref(null)
 
@@ -17,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Menangani proses login pengguna.
    */
-  async function login(credentials) {
+  async function login(credentials, rememberMe = false) {
     loading.value = true
     error.value = null
 
@@ -25,18 +30,51 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await authApi.login(credentials)
       token.value = response.token
       user.value = response.user
-      localStorage.setItem('token', response.token)
-      localStorage.setItem('user', JSON.stringify(response.user))
+      
+      const storage = rememberMe ? localStorage : sessionStorage
+      
+      // Bersihkan storage lainnya untuk menghindari duplikasi/konflik
+      const otherStorage = rememberMe ? sessionStorage : localStorage
+      otherStorage.removeItem('token')
+      otherStorage.removeItem('user')
+      otherStorage.removeItem('encryptedPrivateKey')
+      otherStorage.removeItem('kdfSalt')
+      otherStorage.removeItem('kdfIterations')
+      otherStorage.removeItem('publicKey')
 
-      // Recovery: backend now returns these fields in LoginResponse.user
+      // Simpan ke storage yang dipilih
+      storage.setItem('token', response.token)
+      storage.setItem('user', JSON.stringify(response.user))
+
+      // Simpan email untuk pre-fill jika rememberMe aktif
+      if (rememberMe) {
+        localStorage.setItem('remembered_email', credentials.email)
+      } else {
+        localStorage.removeItem('remembered_email')
+      }
+
+      // Recovery: simpan metadata crypto ke storage yang sama
       if (response.user && response.user.encryptedPrivateKey) {
-        localStorage.setItem('encryptedPrivateKey', JSON.stringify({
+        storage.setItem('encryptedPrivateKey', JSON.stringify({
           ciphertext: response.user.encryptedPrivateKey,
           iv: response.user.privateKeyIv
         }))
-        localStorage.setItem('kdfSalt', response.user.privateKeyKdfSalt)
-        // Default iterations (as backend doesn't store this specifically yet)
-        localStorage.setItem('kdfIterations', '100000')
+        storage.setItem('kdfSalt', response.user.privateKeyKdfSalt)
+        storage.setItem('kdfIterations', '100000')
+
+        // Fetch public key sendiri karena tidak ada di LoginResponse
+        try {
+          const { messageApi } = await import('../api/messages')
+          const pubKeyResponse = await messageApi.getConversationCrypto(response.user.id)
+          storage.setItem('publicKey', pubKeyResponse.publicKey)
+          
+          // Push to cryptoStore memory immediately
+          const cryptoStore = useCryptoStore()
+          cryptoStore.publicKey = pubKeyResponse.publicKey
+          console.log('[Auth] Kunci publik sendiri berhasil dimuat ke memori.');
+        } catch (err) {
+          console.error('[Auth] Gagal mengambil kunci publik sendiri:', err)
+        }
       }
       
       return response
@@ -58,7 +96,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authApi.register(payload)
       
-      // Store local crypto material after registration so it's available for the session
+      // Registrasi selalu menyimpan metadata secara lokal untuk sementara
+      // agar bisa lanjut ke setup/login
       localStorage.setItem('encryptedPrivateKey', JSON.stringify({
         ciphertext: payload.encryptedPrivateKey,
         iv: payload.privateKeyIv
@@ -86,12 +125,18 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     token.value = null
     error.value = null
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('encryptedPrivateKey')
-    localStorage.removeItem('kdfSalt')
-    localStorage.removeItem('kdfIterations')
-    localStorage.removeItem('publicKey')
+    
+    // Bersihkan kedua storage
+    const storages = [localStorage, sessionStorage]
+    storages.forEach(s => {
+      s.removeItem('token')
+      s.removeItem('user')
+      s.removeItem('encryptedPrivateKey')
+      s.removeItem('kdfSalt')
+      s.removeItem('kdfIterations')
+      s.removeItem('publicKey')
+    })
+    // Note: 'remembered_email' tidak dihapus saat logout agar tetap ada di form login
   }
 
   function clearError() {

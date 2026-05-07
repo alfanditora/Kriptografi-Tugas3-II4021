@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useToast } from '../composables/useToast'
 
 // Create axios instance with base URL from env
 const apiClient = axios.create({
@@ -11,7 +12,7 @@ const apiClient = axios.create({
 // Request interceptor - add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -26,7 +27,17 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.message || error.message || 'An error occurred'
+    const { error: toastError } = useToast()
+    
+    // Backend schema often uses 'detail' for error messages
+    const message = error.response?.data?.detail || 
+                    error.response?.data?.message || 
+                    error.message || 
+                    'Terjadi kesalahan pada sistem'
+    
+    // Tampilkan toast error secara otomatis
+    toastError(message)
+    
     return Promise.reject(new Error(message))
   }
 )

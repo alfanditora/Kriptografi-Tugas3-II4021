@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-layout>
     <!-- Bilah Aplikasi -->
     <v-app-bar
       elevation="1"
@@ -111,7 +111,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-app>
+  </v-layout>
 </template>
 
 <script setup>
