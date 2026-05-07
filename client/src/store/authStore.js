@@ -28,13 +28,15 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
 
-      // Simpan data kunci terenkripsi untuk unlock setelah refresh
-      // API Schema: response.crypto contains nested encryptedPrivateKey and kdf
-      if (response.crypto) {
-        localStorage.setItem('encryptedPrivateKey', JSON.stringify(response.crypto.encryptedPrivateKey))
-        localStorage.setItem('publicKey', JSON.stringify(response.crypto.publicKey))
-        localStorage.setItem('kdfSalt', response.crypto.kdf?.salt)
-        localStorage.setItem('kdfIterations', String(response.crypto.kdf?.iterations || 100000))
+      // Recovery: backend now returns these fields in LoginResponse.user
+      if (response.user && response.user.encryptedPrivateKey) {
+        localStorage.setItem('encryptedPrivateKey', JSON.stringify({
+          ciphertext: response.user.encryptedPrivateKey,
+          iv: response.user.privateKeyIv
+        }))
+        localStorage.setItem('kdfSalt', response.user.privateKeyKdfSalt)
+        // Default iterations (as backend doesn't store this specifically yet)
+        localStorage.setItem('kdfIterations', '100000')
       }
       
       return response
@@ -55,23 +57,15 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const response = await authApi.register(payload)
-      token.value = response.token
-      user.value = response.user
-      localStorage.setItem('token', response.token)
-      localStorage.setItem('user', JSON.stringify(response.user))
-
-      // Inisialisasi status crypto store dari data payload registrasi
-      const cryptoStore = useCryptoStore()
-      cryptoStore.publicKey = payload.crypto.publicKey.x
-      cryptoStore.encryptedPrivateKey = payload.crypto.encryptedPrivateKey
-      cryptoStore.kdfSalt = payload.crypto.kdf.salt
-      cryptoStore.kdfIterations = payload.crypto.kdf.iterations
-
-      // Simpan data kunci terenkripsi untuk unlock setelah refresh
-      localStorage.setItem('encryptedPrivateKey', JSON.stringify(payload.crypto.encryptedPrivateKey))
-      localStorage.setItem('publicKey', JSON.stringify(payload.crypto.publicKey))
-      localStorage.setItem('kdfSalt', payload.crypto.kdf.salt)
-      localStorage.setItem('kdfIterations', String(payload.crypto.kdf.iterations))
+      
+      // Store local crypto material after registration so it's available for the session
+      localStorage.setItem('encryptedPrivateKey', JSON.stringify({
+        ciphertext: payload.encryptedPrivateKey,
+        iv: payload.privateKeyIv
+      }))
+      localStorage.setItem('publicKey', payload.publicKey)
+      localStorage.setItem('kdfSalt', payload.privateKeyKdfSalt)
+      localStorage.setItem('kdfIterations', '100000')
       
       return response
     } catch (err) {

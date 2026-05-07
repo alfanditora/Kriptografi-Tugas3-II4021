@@ -372,7 +372,8 @@ watch(() => cryptoStore.isInitialized, async (initialized) => {
 async function loadContacts() {
   try {
     const response = await messageApi.getContacts()
-    contacts.value = (response.items || []).filter(u => u.email !== authStore.user?.email)
+    // Backend returns array directly
+    contacts.value = (Array.isArray(response) ? response : []).filter(u => u.email !== authStore.user?.email)
   } catch (err) {
     console.error('Gagal memuat kontak:', err)
   }
@@ -407,36 +408,49 @@ async function setupChat() {
 async function loadMessages() {
   try {
     const response = await messageApi.getMessages(selectedUserId.value)
-    const encryptedMessages = response.items || []
+    // Backend returns array directly
+    const encryptedMessages = Array.isArray(response) ? response : []
+    
+    console.log(`[Chat] Memuat ${encryptedMessages.length} pesan terenkripsi.`);
 
     messages.value = await Promise.all(
       encryptedMessages.map(async (msg) => {
         try {
-          const payload = JSON.parse(msg.payload)
-          const ciphertext = crypto.base64ToArrayBuffer(payload.ciphertext)
-          const iv = crypto.base64ToArrayBuffer(payload.iv)
+          const ciphertext = crypto.base64ToArrayBuffer(msg.ciphertext)
+          const iv = crypto.base64ToArrayBuffer(msg.iv)
+          
+          console.log(`[Kripto] Mendekripsi pesan ID: ${msg.id}`);
           const decrypted = await crypto.decrypt(ciphertext, iv, aesKey)
           const text = new TextDecoder().decode(decrypted)
+          console.log('[Kripto] Pesan berhasil didekripsi.');
 
           let macVerified = false
-          if (payload.mac && hmacKey) {
-            const macBuffer = crypto.base64ToArrayBuffer(payload.mac)
+          if (msg.mac && hmacKey) {
+            console.log('[Kripto] Memverifikasi integritas pesan (MAC)...');
+            const macBuffer = crypto.base64ToArrayBuffer(msg.mac)
             macVerified = await crypto.verify(text, macBuffer, hmacKey)
+            
+            if (macVerified) {
+              console.log('[Kripto] Verifikasi MAC sukses: Pesan asli dan autentik.');
+            } else {
+              console.warn('[Kripto] Verifikasi MAC GAGAL: Pesan mungkin telah dimanipulasi!');
+            }
           }
 
           return {
             id: msg.id,
             text,
             timestamp: new Date(msg.createdAt),
-            isMe: payload.sender_email === authStore.user?.email,
+            isMe: msg.senderId === authStore.user?.id,
             macVerified
           }
-        } catch {
+        } catch (e) {
+          console.error('[Kripto] Dekripsi gagal untuk pesan:', msg.id, e);
           return {
             id: msg.id,
             text: '[Dekripsi gagal]',
             timestamp: new Date(msg.createdAt),
-            isMe: false,
+            isMe: msg.senderId === authStore.user?.id,
             macVerified: false,
             error: true
           }
@@ -444,7 +458,7 @@ async function loadMessages() {
       })
     )
   } catch (err) {
-    console.error('Gagal memuat pesan:', err)
+    console.error('[Chat] Gagal memuat pesan:', err)
   }
 }
 
@@ -453,30 +467,25 @@ async function sendMessage() {
 
   sending.value = true
   const text = newMessage.value.trim()
+  console.log('[Chat] Mengirim pesan baru...');
 
   try {
     const plaintext = new TextEncoder().encode(text)
+    
+    console.log('[Kripto] Mengenkripsi pesan menggunakan AES-256...');
     const { ciphertext, iv } = await crypto.encrypt(plaintext, aesKey)
+    
+    console.log('[Kripto] Menghitung MAC untuk integritas pesan...');
     const mac = await crypto.sign(text, hmacKey)
 
-    const payload = {
-      sender_email: authStore.user?.email,
-      receiver_email: activeContact.value?.email,
+    console.log('[Chat] Mengirim data terenkripsi ke server...');
+    await messageApi.sendMessage({
+      receiverId: selectedUserId.value,
       ciphertext: crypto.arrayBufferToBase64(ciphertext),
       iv: crypto.arrayBufferToBase64(iv),
-      mac: crypto.arrayBufferToBase64(mac),
-      timestamp: new Date().toISOString()
-    }
-
-    await messageApi.sendMessage(selectedUserId.value, JSON.stringify(payload))
-
-    messages.value.push({
-      id: `temp_${Date.now()}`,
-      text,
-      timestamp: new Date(),
-      isMe: true,
-      macVerified: true
+      mac: crypto.arrayBufferToBase64(mac)
     })
+    console.log('[Chat] Pesan berhasil dikirim.');
 
     newMessage.value = ''
     scrollToBottom()

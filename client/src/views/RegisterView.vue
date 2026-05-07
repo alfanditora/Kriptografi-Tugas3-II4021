@@ -237,65 +237,59 @@ const rules = {
   matchPassword: (v) => v === formData.value.password || 'Kata sandi tidak cocok'
 }
 
+function handleGoogleClick() {
+  alert('Whoops! This feature is still under development.');
+}
+
 // Menangani pengiriman formulir
 async function handleSubmit() {
   if (formData.value.password !== formData.value.confirmPassword) {
-    console.error('Password tidak cocok');
+    console.error('[Auth] Password tidak cocok');
     return
   }
 
-  console.log('Memulai proses registrasi untuk:', formData.value.email);
+  console.log('[Auth] Memulai proses registrasi untuk:', formData.value.email);
 
   try {
     // Siapkan data kriptografi (Phase 5.1)
-    console.log('Men-generate key pair dan mengenkripsi private key...');
+    console.log('[Kripto] Menghasilkan pasangan kunci ECDH dan mengenkripsi private key...');
     const cryptoData = await crypto.prepareRegistrationData(
       formData.value.email,
       formData.value.password
     )
-    console.log('Data kriptografi siap.');
+    console.log('[Kripto] Data kriptografi siap dikirim ke server.');
 
-    // Susun payload sesuai API & Table Schema.md
+    // Susun payload sesuai backend schemas.py (UserRegister)
     const payload = {
       email: formData.value.email,
       password: formData.value.password,
-      crypto: {
-        publicKey: {
-          kty: "OKP",
-          crv: "X25519",
-          x: crypto.arrayBufferToBase64(cryptoData.publicKey)
-        },
-        encryptedPrivateKey: {
-          ciphertext: crypto.arrayBufferToBase64(cryptoData.encryptedPrivateKey),
-          iv: crypto.arrayBufferToBase64(cryptoData.iv),
-          alg: "AES-256-CBC"
-        },
-        kdf: {
-          name: "PBKDF2",
-          hash: "SHA-256",
-          salt: crypto.arrayBufferToBase64(cryptoData.kdfSalt),
-          iterations: cryptoData.kdfIterations
-        }
-      }
+      publicKey: crypto.arrayBufferToBase64(cryptoData.publicKey),
+      encryptedPrivateKey: crypto.arrayBufferToBase64(cryptoData.encryptedPrivateKey),
+      privateKeyIv: crypto.arrayBufferToBase64(cryptoData.iv),
+      privateKeyKdfSalt: crypto.arrayBufferToBase64(cryptoData.kdfSalt)
     }
 
-    console.log('Mengirim payload registrasi ke mock API...');
+    console.log('[Auth] Mengirim data registrasi ke API...');
     await authStore.register(payload)
-    console.log('Registrasi berhasil.');
+    console.log('[Auth] Registrasi berhasil.');
 
     // Inisialisasi kunci privat agar isInitialized menjadi true (Phase 5.1)
-    console.log('Menyiapkan kunci privat untuk sesi ini...');
+    console.log('[Kripto] Menyiapkan kunci privat untuk sesi aktif...');
     await cryptoStore.decryptPrivateKey(
       formData.value.password,
-      payload.crypto.encryptedPrivateKey,
-      payload.crypto.kdf.salt,
-      payload.crypto.kdf.iterations
+      {
+        ciphertext: payload.encryptedPrivateKey,
+        iv: payload.privateKeyIv
+      },
+      payload.privateKeyKdfSalt,
+      cryptoData.kdfIterations
     )
-    console.log('Kunci privat siap di memori.');
+    console.log('[Kripto] Kunci privat siap digunakan.');
 
-    router.push('/chat')
+    // Redirect ke login karena backend tidak mengembalikan token saat register
+    router.push('/login')
   } catch (error) {
-    console.error('Registrasi gagal di View:', error.message)
+    console.error('[Auth] Registrasi gagal:', error.message)
   }
 }
 </script>

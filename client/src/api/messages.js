@@ -8,21 +8,26 @@ export const messageApi = {
     return response.data
   },
 
-  async getConversationCrypto(conversationId) {
-    if (isMockEnabled) return mockApi.messages.getConversationCrypto(conversationId);
-    const response = await apiClient.get(`/conversations/${conversationId}/crypto`)
+  async getConversationCrypto(userId) {
+    if (isMockEnabled) return mockApi.messages.getConversationCrypto(userId);
+    const response = await apiClient.get(`/users/${userId}/public-key`)
     return response.data
   },
 
-  async getMessages(conversationId) {
-    if (isMockEnabled) return mockApi.messages.getMessages(conversationId);
-    const response = await apiClient.get(`/conversations/${conversationId}/messages`)
+  async getMessages(userId) {
+    if (isMockEnabled) return mockApi.messages.getMessages(userId);
+    const response = await apiClient.get(`/messages/${userId}`)
     return response.data
   },
 
-  async sendMessage(conversationId, payload) {
-    if (isMockEnabled) return mockApi.messages.sendMessage(conversationId, payload);
-    const response = await apiClient.post(`/conversations/${conversationId}/messages`, { payload })
+  async sendMessage({ receiverId, ciphertext, iv, mac }) {
+    if (isMockEnabled) return mockApi.messages.sendMessage(receiverId, JSON.stringify({ ciphertext, iv, mac }));
+    const response = await apiClient.post('/messages', {
+      receiverId,
+      ciphertext,
+      iv,
+      mac
+    })
     return response.data
   }
 }

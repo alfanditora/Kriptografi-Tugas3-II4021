@@ -50,14 +50,16 @@ export function useUnlockModal() {
 
     try {
       // Ambil data dari localStorage
-      const encryptedData = JSON.parse(localStorage.getItem('encryptedPrivateKey') || '{}')
-      const publicKeyData = JSON.parse(localStorage.getItem('publicKey') || '{}')
+      const encryptedDataStr = localStorage.getItem('encryptedPrivateKey')
+      const publicKey = localStorage.getItem('publicKey') // This is a raw base64 string
       const salt = localStorage.getItem('kdfSalt')
       const iterations = parseInt(localStorage.getItem('kdfIterations') || '100000')
 
-      if (!encryptedData.ciphertext || !salt) {
+      if (!encryptedDataStr || !salt) {
         throw new Error('Data kunci tidak ditemukan. Silakan login ulang.')
       }
+
+      const encryptedData = JSON.parse(encryptedDataStr)
 
       // Dekripsi private key
       await cryptoStore.decryptPrivateKey(
@@ -66,6 +68,9 @@ export function useUnlockModal() {
         salt,
         iterations
       )
+
+      // Set public key back to store
+      cryptoStore.publicKey = publicKey
 
       // Sukses - tutup modal
       hide()

@@ -139,6 +139,7 @@
         class="rounded-lg font-semibold text-none py-3"
         style="background-color: #DFF1EE; color: #1DA88B; border-color: #DFF1EE;"
         elevation="0"
+        @click="handleGoogleClick"
       >
         <v-icon left class="mr-2">mdi-google</v-icon>
         Masuk dengan Google
@@ -186,7 +187,7 @@ const rules = {
 
 // Menangani pengiriman formulir
 async function handleSubmit() {
-  console.log('Mencoba login untuk:', formData.value.email);
+  console.log('[Auth] Mencoba login untuk:', formData.value.email);
   
   try {
     const response = await authStore.login({
@@ -194,23 +195,29 @@ async function handleSubmit() {
       password: formData.value.password
     })
     
-    console.log('Login berhasil, respons API:', response);
+    console.log('[Auth] Login berhasil, token JWT diterima.');
 
     // Inisialisasi kunci privat setelah login berhasil (Phase 5.2)
-    if (response && response.crypto) {
-      console.log('Mendekripsi kunci privat menggunakan password...');
+    // backend sends these in response.user now
+    if (response && response.user && response.user.encryptedPrivateKey) {
+      console.log('[Kripto] Memulihkan kunci privat dari server...');
       await cryptoStore.decryptPrivateKey(
         formData.value.password, 
-        response.crypto.encryptedPrivateKey,
-        response.crypto.kdf.salt,
-        response.crypto.kdf.iterations
+        {
+          ciphertext: response.user.encryptedPrivateKey,
+          iv: response.user.privateKeyIv
+        },
+        response.user.privateKeyKdfSalt,
+        100000 // Default iterations
       )
-      console.log('Kunci privat berhasil dimuat ke memori.');
+      console.log('[Kripto] Kunci privat berhasil dimuat ke memori.');
+    } else {
+      console.warn('[Kripto] Data pemulihan kunci tidak ditemukan dalam respon server.');
     }
 
     router.push('/chat')
   } catch (error) {
-    console.error('Login gagal di View:', error.message)
+    console.error('[Auth] Login gagal:', error.message)
   }
 }
 </script>
