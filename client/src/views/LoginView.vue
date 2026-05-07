@@ -185,6 +185,10 @@ const rules = {
   email: (v) => /.+@.+\..+/.test(v) || 'Harap masukkan email yang valid'
 }
 
+function handleGoogleClick() {
+  alert('Whoops! This feature is still under development.');
+}
+
 // Menangani pengiriman formulir
 async function handleSubmit() {
   console.log('[Auth] Mencoba login untuk:', formData.value.email);

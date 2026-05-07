@@ -188,6 +188,7 @@
         class="rounded-lg font-semibold text-none py-3"
         style="background-color: #DFF1EE; color: #1DA88B; border-color: #DFF1EE;"
         elevation="0"
+        @click="handleGoogleClick"
       >
         <v-icon left class="mr-2">mdi-google</v-icon>
         Daftar dengan Google
