@@ -44,7 +44,8 @@ def create_message(db: Session, message: schemas.MessageCreate, sender_id: uuid.
         sender_id=sender_id,
         receiver_id=message.receiver_id,
         ciphertext=message.ciphertext,
-        iv=message.iv
+        iv=message.iv,
+        mac=message.mac
     )
     db.add(db_message)
     db.commit()

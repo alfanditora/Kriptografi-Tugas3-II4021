@@ -42,6 +42,7 @@ class Message(Base):
     
     ciphertext = Column(Text, nullable=False)
     iv = Column(Text, nullable=False)
+    mac = Column(Text, nullable=False)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

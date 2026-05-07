@@ -60,6 +60,7 @@ class MessageCreate(BaseModel):
     receiver_id: UUID = Field(..., alias="receiverId")
     ciphertext: str
     iv: str
+    mac: str
 
     class Config:
         populate_by_name = True
@@ -71,6 +72,7 @@ class MessageResponse(BaseModel):
     receiver_id: UUID = Field(..., alias="receiverId")
     ciphertext: str
     iv: str
+    mac: str
     created_at: datetime = Field(..., alias="createdAt")
 
     class Config:
