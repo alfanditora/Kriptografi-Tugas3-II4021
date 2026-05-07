@@ -21,9 +21,19 @@ class UserLogin(BaseModel):
     password: str
 
 
+class LoginUser(BaseModel):
+    id: UUID
+    email: EmailStr
+    encrypted_private_key: str = Field(..., alias="encryptedPrivateKey")
+    private_key_iv: str = Field(..., alias="privateKeyIv")
+    private_key_kdf_salt: str = Field(..., alias="privateKeyKdfSalt")
+
+    class Config:
+        populate_by_name = True
+
 class LoginResponse(BaseModel):
     token: str
-    user: dict  # UUID & Email
+    user: LoginUser
 
 
 # User & Contact Schemas

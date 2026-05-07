@@ -66,5 +66,8 @@ def login(login_data: schemas.UserLogin, db: Session = Depends(get_db)):
         "user": {
             "id": user.id,
             "email": user.email,
+            "encryptedPrivateKey": user.encrypted_private_key,
+            "privateKeyIv": user.private_key_iv,
+            "privateKeyKdfSalt": user.private_key_kdf_salt,
         }
     }
