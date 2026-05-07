@@ -219,13 +219,20 @@
                       :color="message.macVerified ? '#1DA88B' : '#CBD5E0'"
                       class="ml-1"
                     ></v-icon>
-                    <v-icon
-                      v-if="!message.isMe && message.error"
-                      icon="mdi-alert-circle"
-                      size="14"
-                      color="error"
-                      class="ml-1"
-                    ></v-icon>
+                    <!-- Warning icon for decryption or MAC failure -->
+                    <v-tooltip v-if="message.decryptionError || message.macError" location="top">
+                      <template v-slot:activator="{ props }">
+                        <v-icon
+                          v-bind="props"
+                          icon="mdi-alert-circle"
+                          size="14"
+                          color="error"
+                          class="ml-1"
+                        ></v-icon>
+                      </template>
+                      <span v-if="message.decryptionError">Pesan tidak dapat didekripsi</span>
+                      <span v-else-if="message.macError">Pesan mungkin telah dimanipulasi</span>
+                    </v-tooltip>
                   </div>
                 </div>
               </div>
@@ -437,6 +444,7 @@ async function loadMessages() {
           console.log('[Kripto] Pesan berhasil didekripsi.');
 
           let macVerified = false
+          let macError = false
           if (msg.mac && hmacKey) {
             console.log('[Kripto] Memverifikasi integritas pesan (MAC)...');
             const macBuffer = crypto.base64ToArrayBuffer(msg.mac)
@@ -446,6 +454,8 @@ async function loadMessages() {
               console.log('[Kripto] Verifikasi MAC sukses: Pesan asli dan autentik.');
             } else {
               console.warn('[Kripto] Verifikasi MAC GAGAL: Pesan mungkin telah dimanipulasi!');
+              macError = true
+              throw new Error('Verifikasi MAC gagal - Pesan mungkin telah dimanipulasi')
             }
           }
 
@@ -454,17 +464,32 @@ async function loadMessages() {
             text,
             timestamp: new Date(msg.createdAt),
             isMe: msg.senderId === authStore.user?.id,
-            macVerified
+            macVerified,
+            macError
           }
         } catch (e) {
-          console.error('[Kripto] Dekripsi gagal untuk pesan:', msg.id, e);
-          return {
-            id: msg.id,
-            text: '[Dekripsi gagal]',
-            timestamp: new Date(msg.createdAt),
-            isMe: msg.senderId === authStore.user?.id,
-            macVerified: false,
-            error: true
+          if (e.message.includes('Verifikasi MAC gagal')) {
+            console.error('[Kripto] Verifikasi MAC gagal untuk pesan:', msg.id, e);
+            return {
+              id: msg.id,
+              text: '[Verifikasi MAC gagal]',
+              timestamp: new Date(msg.createdAt),
+              isMe: msg.senderId === authStore.user?.id,
+              macVerified: false,
+              macError: true,
+              decryptionError: false
+            }
+          } else {
+            console.error('[Kripto] Dekripsi gagal untuk pesan:', msg.id, e);
+            return {
+              id: msg.id,
+              text: '[Dekripsi gagal]',
+              timestamp: new Date(msg.createdAt),
+              isMe: msg.senderId === authStore.user?.id,
+              macVerified: false,
+              macError: false,
+              decryptionError: true
+            }
           }
         }
       })
@@ -558,6 +583,7 @@ function connectToMessageStream() {
         console.log('[Kripto] Pesan SSE berhasil didekripsi.');
 
         let macVerified = false
+        let macError = false
         if (incomingMessage.mac && hmacKey) {
           console.log('[Kripto] Memverifikasi integritas pesan SSE (MAC)...');
           const macBuffer = crypto.base64ToArrayBuffer(incomingMessage.mac)
@@ -567,6 +593,7 @@ function connectToMessageStream() {
             console.log('[Kripto] Verifikasi MAC SSE sukses: Pesan asli dan autentik.');
           } else {
             console.warn('[Kripto] Verifikasi MAC SSE GAGAL: Pesan mungkin telah dimanipulasi!');
+            macError = true
           }
         }
 
@@ -578,7 +605,8 @@ function connectToMessageStream() {
           text,
           timestamp: new Date(incomingMessage.createdAt),
           isMe: isSender,
-          macVerified
+          macVerified,
+          macError
         }
 
         if (existingIndex >= 0) {
@@ -603,7 +631,8 @@ function connectToMessageStream() {
           timestamp: new Date(incomingMessage.createdAt),
           isMe: incomingMessage.senderId === authStore.user?.id,
           macVerified: false,
-          error: true
+          macError: false,
+          decryptionError: true
         }
         
         if (existingIndex >= 0) {
