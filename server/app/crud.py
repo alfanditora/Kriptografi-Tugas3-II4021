@@ -1,74 +1,87 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, func
 from . import models, schemas
 import uuid
+from security.password import hash_password, generate_salt
 
-# USER
+# User CRUD
 
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
-def create_user(db: Session, user: schemas.UserRegister, hashed_password: str, salt: str):
+def get_user_by_id(db: Session, user_id: uuid.UUID):
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+def create_user(db: Session, user_schema: schemas.UserRegister, hashed_password: str, salt: str):
     db_user = models.User(
-        email=user.email,
+        email=user_schema.email,
         password_hash=hashed_password,
         password_salt=salt,
-        public_key=user.crypto.publicKey.dict(),
-        encrypted_private_key=user.crypto.encryptedPrivateKey.dict(),
-        kdf_metadata=user.crypto.kdf.dict()
+        public_key=user_schema.public_key,
+        encrypted_private_key=user_schema.encrypted_private_key,
+        private_key_iv=user_schema.private_key_iv,
+        private_key_kdf_salt=user_schema.private_key_kdf_salt
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
-def get_all_users_except_me(db: Session, current_user_id: str):
+def get_all_contacts(db: Session, current_user_id: uuid.UUID):
     return db.query(models.User).filter(models.User.id != current_user_id).all()
 
-# CONVERSATION
+# Message & Conversation CRUD
 
-def get_conversation_between_users(db: Session, user_a_id: str, user_b_id: str):
-    ids = sorted([user_a_id, user_b_id])
-    return db.query(models.Conversation).filter(
-        models.Conversation.user_a_id == ids[0],
-        models.Conversation.user_b_id == ids[1]
-    ).first()
+def generate_conversation_key(user1_id: uuid.UUID, user2_id: uuid.UUID) -> str:
+    ids = sorted([str(user1_id), str(user2_id)])
+    return f"{ids[0]}:{ids[1]}"
 
-def create_conversation(db: Session, user_a_id: str, user_b_id: str):
-    ids = sorted([user_a_id, user_b_id])
-    db_conv = models.Conversation(user_a_id=ids[0], user_b_id=ids[1])
-    db.add(db_conv)
-    db.commit()
-    db.refresh(db_conv)
-    return db_conv
-
-def get_user_conversations(db: Session, user_id: str):
-    return db.query(models.Conversation).filter(
-        (models.Conversation.user_a_id == user_id) | 
-        (models.Conversation.user_b_id == user_id)
-    ).all()
-
-# MESSAGE
-
-def create_message(db: Session, conversation_id: str, sender_id: str, receiver_id: str, payload: schemas.MessagePayload):
-    db_msg = models.Message(
-        conversation_id=conversation_id,
+def create_message(db: Session, message: schemas.MessageCreate, sender_id: uuid.UUID):
+    conv_key = generate_conversation_key(sender_id, message.receiver_id)
+    
+    db_message = models.Message(
+        conversation_key=conv_key,
         sender_id=sender_id,
-        receiver_id=receiver_id,
-        ciphertext=payload.ciphertext,
-        iv=payload.iv,
-        mac=payload.mac,
-        client_timestamp=payload.timestamp
+        receiver_id=message.receiver_id,
+        ciphertext=message.ciphertext,
+        iv=message.iv
     )
-    db.add(db_msg)
-    db.query(models.Conversation).filter(models.Conversation.id == conversation_id).update(
-        {"updated_at": func.now()}
-    )
+    db.add(db_message)
     db.commit()
-    db.refresh(db_msg)
-    return db_msg
+    db.refresh(db_message)
+    return db_message
 
-def get_messages_by_conversation(db: Session, conversation_id: str, since: str = None):
-    query = db.query(models.Message).filter(models.Message.conversation_id == conversation_id)
-    if since:
-        query = query.filter(models.Message.created_at > since)
-    return query.order_by(models.Message.created_at.asc()).all() 
+def get_messages_by_user(db: Session, user1_id: uuid.UUID, user2_id: uuid.UUID):
+    conv_key = generate_conversation_key(user1_id, user2_id)
+    return db.query(models.Message).filter(
+        models.Message.conversation_key == conv_key
+    ).order_by(models.Message.created_at.asc()).all()
+
+def get_user_chats(db: Session, current_user_id: uuid.UUID):
+    last_messages = db.query(
+        models.Message.conversation_key,
+        func.max(models.Message.created_at).label("last_msg_at")
+    ).filter(
+        or_(
+            models.Message.sender_id == current_user_id,
+            models.Message.receiver_id == current_user_id
+        )
+    ).group_by(models.Message.conversation_key).subquery()
+
+    results = db.query(models.User, last_messages.c.last_msg_at).join(
+        models.Message, 
+        models.Message.conversation_key == last_messages.c.conversation_key
+    ).filter(
+        and_(
+            or_(models.Message.sender_id == models.User.id, models.Message.receiver_id == models.User.id),
+            models.User.id != current_user_id
+        )
+    ).distinct().all()
+
+    return [
+        {
+            "userId": user.id,
+            "email": user.email,
+            "lastMessageAt": last_msg_at
+        } for user, last_msg_at in results
+    ]

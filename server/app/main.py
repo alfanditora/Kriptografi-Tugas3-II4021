@@ -1,9 +1,19 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine
+
+from app.database import engine, Base
+from app.routers import auth, messages
 from app import models
 
-from app.routers import auth, contacts, conversations, messages
+from dotenv import load_dotenv
+
+load_dotenv()
+
+for key in ["JWT_PRIVATE_KEY", "JWT_PUBLIC_KEY"]:
+    val = os.getenv(key)
+    if val:
+        os.environ[key] = val.replace("\\n", "\n")
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -18,10 +28,17 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-app.include_router(contacts.router)
-app.include_router(conversations.router)
 app.include_router(messages.router)
 
 @app.get("/")
 def root():
-    return {"status": "Secure Chat API is running"}
+    return {
+        "status": "online",
+        "message": "Welcome to the Secure Chat API",
+        "assignment": "Tugas 3 II4021 Kriptografi"
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    # Run server at port 8000
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

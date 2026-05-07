@@ -1,4 +1,5 @@
 import os
+import uuid
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -15,14 +16,16 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     try:
         decoded = verify(token, public_key)
         user_id = decoded.get("payload", {}).get("sub")
-        
-        if not user_id:
+        try:
+            user_uuid = uuid.UUID(user_id)
+        except (ValueError, TypeError):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
             
-        user = db.query(User).filter(User.id == user_id).first()
+        user = db.query(User).filter(User.id == user_uuid).first()
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
             
         return user
-    except Exception:
+    except Exception as e:
+        print("VERIFY EXCEPTION:", e)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

@@ -1,67 +1,50 @@
 import uuid
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON
+from datetime import datetime
+from sqlalchemy import Column, String, Text, ForeignKey, DateTime, Index
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from .database import Base
 
-def generate_uuid():
-    return str(uuid.uuid4())
+from app.database import Base
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(String, primary_key=True, default=generate_uuid)
-    email = Column(String, unique=True, index=True, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), unique=True, nullable=False)
     
     password_hash = Column(Text, nullable=False)
     password_salt = Column(Text, nullable=False)
-
-    public_key = Column(JSON, nullable=False)
-    encrypted_private_key = Column(JSON, nullable=False)
-    kdf_metadata = Column(JSON, nullable=False)
-
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    # Relation
-    conversations_a = relationship("Conversation", foreign_keys="[Conversation.user_a_id]", back_populates="user_a")
-    conversations_b = relationship("Conversation", foreign_keys="[Conversation.user_b_id]", back_populates="user_b")
-
-class Conversation(Base):
-    __tablename__ = "conversations"
-
-    id = Column(String, primary_key=True, default=generate_uuid)
     
-    user_a_id = Column(String, ForeignKey("users.id"), nullable=False)
-    user_b_id = Column(String, ForeignKey("users.id"), nullable=False)
+    public_key = Column(Text, nullable=False)
+    
+    encrypted_private_key = Column(Text, nullable=False)
+    private_key_iv = Column(Text, nullable=False)
+    
+    private_key_kdf_salt = Column(Text, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    # Relationships
+    sent_messages = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender")
+    received_messages = relationship("Message", foreign_keys="Message.receiver_id", back_populates="receiver")
 
-    # Relation
-    user_a = relationship("User", foreign_keys=[user_a_id], back_populates="conversations_a")
-    user_b = relationship("User", foreign_keys=[user_b_id], back_populates="conversations_b")
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
 
 class Message(Base):
     __tablename__ = "messages"
 
-    id = Column(String, primary_key=True, default=generate_uuid)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
-    conversation_id = Column(String, ForeignKey("conversations.id"), nullable=False)
+    conversation_key = Column(Text, nullable=False, index=True)
     
-    sender_id = Column(String, ForeignKey("users.id"), nullable=False)
-    receiver_id = Column(String, ForeignKey("users.id"), nullable=False)
-
-    # Payload
+    sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    receiver_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    
     ciphertext = Column(Text, nullable=False)
     iv = Column(Text, nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    # Integrity (MAC)
-    mac = Column(Text, nullable=True)
-
-    client_timestamp = Column(DateTime(timezone=True), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    # Relation
-    conversation = relationship("Conversation", back_populates="messages")
+    # Relationships
+    sender = relationship("User", foreign_keys=[sender_id], back_populates="sent_messages")
+    receiver = relationship("User", foreign_keys=[receiver_id], back_populates="received_messages")

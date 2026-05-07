@@ -1,91 +1,78 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
 from app.database import get_db
-from app.models import User, Conversation, Message
+from app import crud, schemas, models
 from security.dependencies import get_current_user
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
 
-router = APIRouter(prefix="/api/conversations/{conversationId}/messages", tags=["messages"])
+router = APIRouter(prefix="/api", tags=["Messages"])
 
-class MacPayload(BaseModel):
-    alg: str
-    value: str
+# Send encrypted message
+@router.post("/messages", response_model=dict)
+def send_message(
+    message_data: schemas.MessageCreate, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
 
-class MessagePayload(BaseModel):
-    ciphertext: str
-    iv: str
-    alg: str
-    timestamp: str
-    mac: MacPayload
+    receiver = crud.get_user_by_id(db, message_data.receiver_id)
+    if not receiver:
+        raise HTTPException(status_code=404, detail="Receiver not found")
 
-class SendMessageRequest(BaseModel):
-    payload: MessagePayload
-
-@router.post("/")
-def send_message(conversationId: str, req: SendMessageRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    conversation = db.query(Conversation).filter(Conversation.id == conversationId).first()
-    if not conversation:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-        
-    if conversation.user_a_id != current_user.id and conversation.user_b_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-        
-    receiver_id = conversation.user_b_id if conversation.user_a_id == current_user.id else conversation.user_a_id
-    
-    msg = Message(
-        conversation_id=conversation.id,
-        sender_id=current_user.id,
-        receiver_id=receiver_id,
-        ciphertext=req.payload.ciphertext,
-        iv=req.payload.iv,
-        client_timestamp=datetime.fromisoformat(req.payload.timestamp.replace("Z", "+00:00")),
-        mac_value=req.payload.mac.value
+    new_msg = crud.create_message(
+        db=db, 
+        message=message_data, 
+        sender_id=current_user.id
     )
     
-    db.add(msg)
-    db.commit()
-    db.refresh(msg)
-    
-    return {"message": {"id": msg.id, "conversationId": conversation.id}}
+    return {"messageId": str(new_msg.id)}
 
-@router.get("/")
-def get_messages(conversationId: str, since: Optional[str] = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    conversation = db.query(Conversation).filter(Conversation.id == conversationId).first()
-    if not conversation:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+# Get chat history
+@router.get("/messages/{user_id}", response_model=List[schemas.MessageResponse])
+def get_chat_history(
+    user_id: str, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        target_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+
+    messages = crud.get_messages_by_user(db, current_user.id, target_uuid)
+    return messages
+
+# Get user conversations
+@router.get("/chats", response_model=List[schemas.ChatListResponse])
+def get_user_conversations(
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    chats = crud.get_user_chats(db, current_user.id)
+    return chats
+
+# Get user public key
+@router.get("/users/{user_id}/public-key", response_model=schemas.PublicKeyResponse)
+def get_user_public_key(
+    user_id: str, 
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    user = crud.get_user_by_id(db, uuid.UUID(user_id))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
         
-    if conversation.user_a_id != current_user.id and conversation.user_b_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-        
-    query = db.query(Message).filter(Message.conversation_id == conversationId)
-    if since:
-        try:
-            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
-            query = query.filter(Message.created_at > since_dt)
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid timestamp format")
-            
-    messages = query.order_by(Message.created_at.asc()).all()
-    
-    result = []
-    for m in messages:
-        result.append({
-            "id": m.id,
-            "senderId": m.sender_id,
-            "receiverId": m.receiver_id,
-            "payload": {
-                "ciphertext": m.ciphertext,
-                "iv": m.iv,
-                "alg": "AES-256-GCM",
-                "timestamp": m.client_timestamp.isoformat() + "Z" if m.client_timestamp else None,
-                "mac": {
-                    "alg": "HMAC-SHA256",
-                    "value": m.mac_value
-                }
-            },
-            "createdAt": m.created_at.isoformat() + "Z" if m.created_at else None
-        })
-        
-    return {"items": result}
+    return {
+        "userId": user.id,
+        "publicKey": user.public_key
+    }
+
+# Get all contacts
+@router.get("/contacts", response_model=List[schemas.ContactResponse])
+def get_contacts(
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_user)
+):
+    contacts = crud.get_all_contacts(db, current_user.id)
+    return contacts

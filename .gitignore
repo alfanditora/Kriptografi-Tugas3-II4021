@@ -6,7 +6,7 @@
 .env.production.local
 
 # --- Python (Server) ---
-server/__pycache__/
+**/__pycache__
 server/*.py[cod]
 server/*$py.class
 server/.venv/
