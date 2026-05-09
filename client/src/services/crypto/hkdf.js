@@ -60,7 +60,7 @@ export async function deriveChatKeys(sharedSecret, salt, infoPrefix) {
         },
         keyMaterial,
         { name: "AES-CBC", length: 256 },
-        false,
+        true,
         ["encrypt", "decrypt"]
     );
 

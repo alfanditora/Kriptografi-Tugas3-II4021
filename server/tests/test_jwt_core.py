@@ -37,6 +37,8 @@ def test_happy_path(ec_keys):
     token = sign(header, claims, payload, priv_key)
     
     decoded = verify(token, pub_key, priv_key)
+    print(f"\n[+] Uji 1 Berhasil: Token diverifikasi dengan public key yang benar.")
+    print(f"[+] Payload yang terbaca: {decoded['payload']}")
     assert decoded["header"] == header
     assert decoded["payload"]["role"] == "student"
     assert decoded["payload"]["iss"] == "university" 
@@ -55,8 +57,9 @@ def test_invalid_header_missing_alg(ec_keys):
 def test_invalid_token_format(ec_keys):
     priv_key, pub_key = ec_keys
     token = "invalid.token.format.here"
-    with pytest.raises(ValueError, match="Invalid JWT format"):
+    with pytest.raises(ValueError, match="Invalid JWT format") as exc_info:
         verify(token, pub_key, priv_key)
+    print(f"\n[+] Uji 3 Berhasil: Sistem melempar error '{exc_info.value}' karena format token tidak valid.")
 
 def test_wrong_signature(ec_keys):
     priv_key1, pub_key1 = ec_keys
@@ -65,8 +68,9 @@ def test_wrong_signature(ec_keys):
     header = {"alg": "ES256", "typ": "JWT"}
     token = sign(header, {}, {"data": "secret"}, priv_key1)
     
-    with pytest.raises(ValueError, match="Invalid signature"):
+    with pytest.raises(ValueError, match="Invalid signature") as exc_info:
         verify(token, pub_key2, priv_key2)
+    print(f"\n[+] Uji 2 Berhasil: Verifikasi dengan public key yang salah menghasilkan error '{exc_info.value}'.")
 
 def test_expired_token(ec_keys):
     priv_key, pub_key = ec_keys
@@ -74,10 +78,12 @@ def test_expired_token(ec_keys):
     claims = {"exp": int(time.time()) - 3600} 
     token = sign(header, claims, {}, priv_key)
     
-    with pytest.raises(ValueError, match="Token is expired"):
+    with pytest.raises(ValueError, match="Token is expired") as exc_info:
         verify(token, pub_key, priv_key)
+    print(f"\n[+] Uji 4 Berhasil: Token ditolak dengan error '{exc_info.value}'.")
         
     decoded = verify(token, pub_key, priv_key, options={"ignoreExp": True})
+    print(f"[+] Token berhasil dibaca dengan opsi ignore: {decoded['payload']}")
     assert decoded["payload"]["exp"] == claims["exp"]
 
 def test_mismatched_iss_or_aud(ec_keys):

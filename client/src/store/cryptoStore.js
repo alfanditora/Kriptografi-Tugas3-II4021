@@ -113,6 +113,7 @@ export const useCryptoStore = defineStore('crypto', {
       // Turunkan shared secret melalui ECDH
       const sharedSecret = await crypto.deriveSharedSecret(this.privateKey, otherPubKey);
       console.log('[Kripto] Shared Secret berhasil dihitung melalui ECDH.');
+      console.log('         => Shared Secret (Base64):', crypto.arrayBufferToBase64(sharedSecret));
 
       // Gunakan HKDF untuk menghasilkan kunci AES dan kunci HMAC dengan info yang berbeda
       const salt = new ArrayBuffer(32); // Zero-filled salt for deterministic derivation
@@ -124,6 +125,10 @@ export const useCryptoStore = defineStore('crypto', {
       console.log('[Kripto] Menurunkan kunci simetris menggunakan HKDF...');
       const { aesKey, hmacKey } = await crypto.deriveChatKeys(sharedSecret, salt, infoPrefix);
       console.log('[Kripto] Kunci AES-256 dan kunci HMAC berhasil diturunkan.');
+      
+      // Export aesKey to raw ArrayBuffer to log its base64 string for proof
+      const aesKeyRaw = await window.crypto.subtle.exportKey("raw", aesKey);
+      console.log('         => Symmetric Key (AES-256) (Base64):', crypto.arrayBufferToBase64(aesKeyRaw));
 
       this.sharedSecrets[otherUserId] = { aesKey, hmacKey };
       return this.sharedSecrets[otherUserId];
