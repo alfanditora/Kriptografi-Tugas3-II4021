@@ -19,11 +19,11 @@ describe('crypto/kdf', () => {
         const password = 'password123';
         let salt;
 
-        it('should derive a key using default iterations (100000)', async () => {
+        it('should derive a key using default iterations (600000)', async () => {
             salt = await generateSalt();
             const result = await deriveKeyFromPassword(password, salt);
             
-            expect(result.iterations).toBe(100000);
+            expect(result.iterations).toBe(600000);
             expect(result.key.type).toBe('secret');
             expect(result.key.algorithm.name).toBe('AES-CBC');
             expect(result.key.algorithm.length).toBe(256);

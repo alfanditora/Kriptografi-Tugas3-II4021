@@ -55,7 +55,7 @@ export function useUnlockModal() {
       const encryptedDataStr = getStoredItem('encryptedPrivateKey')
       const publicKey = getStoredItem('publicKey') // This is a raw base64 string
       const salt = getStoredItem('kdfSalt')
-      const iterations = parseInt(getStoredItem('kdfIterations') || '100000')
+      const iterations = parseInt(getStoredItem('kdfIterations') || '600000')
 
       if (!encryptedDataStr || !salt) {
         throw new Error('Data kunci tidak ditemukan. Silakan login ulang.')

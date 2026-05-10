@@ -23,7 +23,7 @@ describe('crypto/index - Facade', () => {
             
             // KDF parameters
             expect(data.kdfSalt).toBeInstanceOf(ArrayBuffer);
-            expect(data.kdfIterations).toBe(100000);
+            expect(data.kdfIterations).toBe(600000);
             
             // Verify we can decrypt it back
             const decryptedPrivateKey = await decryptPrivateKeyRaw(

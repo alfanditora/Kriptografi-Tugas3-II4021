@@ -10,7 +10,7 @@ export const useCryptoStore = defineStore('crypto', {
     privateKey: null,          // Objek CryptoKey privat (hanya di memori)
     encryptedPrivateKey: null, // Kunci privat terenkripsi dalam format Base64
     kdfSalt: null,             // Salt untuk PBKDF2 dalam format Base64
-    kdfIterations: 100000,     // Jumlah iterasi PBKDF2
+    kdfIterations: 600000,     // Jumlah iterasi PBKDF2
     sharedSecrets: {},         // Cache untuk kunci chat { userId: { aesKey, hmacKey } }
     isInitialized: false       // Status apakah kunci privat sudah siap digunakan
   }),

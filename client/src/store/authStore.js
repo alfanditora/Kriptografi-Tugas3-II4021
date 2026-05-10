@@ -60,7 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
           iv: response.user.privateKeyIv
         }))
         storage.setItem('kdfSalt', response.user.privateKeyKdfSalt)
-        storage.setItem('kdfIterations', '100000')
+        storage.setItem('kdfIterations', '600000')
 
         // Fetch public key sendiri karena tidak ada di LoginResponse
         try {
@@ -104,7 +104,7 @@ export const useAuthStore = defineStore('auth', () => {
       }))
       localStorage.setItem('publicKey', payload.publicKey)
       localStorage.setItem('kdfSalt', payload.privateKeyKdfSalt)
-      localStorage.setItem('kdfIterations', '100000')
+      localStorage.setItem('kdfIterations', '600000')
       
       return response
     } catch (err) {

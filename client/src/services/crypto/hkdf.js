@@ -1,4 +1,6 @@
 /**
+ * [!CREATIVE] Menurunkan dua kunci sekaligus (AES & HMAC) untuk enkripsi dan autentikasi.
+ * [!SELF_IMPLEMENTED] Menggunakan info string terpisah untuk pemisahan domain (domain separation).
  * Menurunkan kunci AES dan HMAC dari shared secret menggunakan HKDF.
  * @param {ArrayBuffer} sharedSecret - Shared secret dari ECDH.
  * @param {ArrayBuffer} salt - Salt untuk HKDF.

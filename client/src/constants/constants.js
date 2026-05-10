@@ -35,7 +35,7 @@ export const CRYPTO = {
   // Pengaturan PBKDF2 untuk derivasi kunci dari password
   PBKDF2_ALGORITHM: 'PBKDF2',
   PBKDF2_HASH: 'SHA-256',
-  PBKDF2_ITERATIONS: 100000,
+  PBKDF2_ITERATIONS: 600000,
   PBKDF2_SALT_LENGTH: 16, // 128 bit
   
   // Pengaturan HKDF untuk shared secret → kunci AES

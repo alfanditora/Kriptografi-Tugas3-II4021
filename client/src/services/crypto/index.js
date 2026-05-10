@@ -10,6 +10,7 @@ export { deriveChatKeys } from './hkdf';
 export * from './hmac';
 
 /**
+ * [!SELF_IMPLEMENTED] Orkestrasi seluruh data pendaftaran (ECDH keys + encrypted private key).
  * Menyiapkan seluruh data kriptografi yang diperlukan untuk pendaftaran pengguna baru.
  * @param {string} email 
  * @param {string} password 
@@ -21,7 +22,7 @@ export async function prepareRegistrationData(email, password) {
     const privateKeyRaw = await exportPrivateKeyRaw(keyPair);
     
     const kdfSalt = await generateSalt();
-    const kdfIterations = 100000;
+    const kdfIterations = 600000;
     
     const { key: aesKey } = await deriveKeyFromPassword(password, kdfSalt, kdfIterations);
     const { ciphertext: encryptedPrivateKey, iv } = await encrypt(privateKeyRaw, aesKey);
