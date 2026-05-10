@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     arrayBufferToBase64,
     base64ToArrayBuffer,
-    stringToArrayBuffer,
-    generateRandomBytes,
-    concatenateBuffers
+    stringToArrayBuffer
 } from './utils';
 
 describe('crypto/utils', () => {
@@ -36,36 +34,6 @@ describe('crypto/utils', () => {
             // "Hello World" in UTF-8
             const expected = new Uint8Array([72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]);
             expect(view).toEqual(expected);
-        });
-    });
-
-    describe('generateRandomBytes', () => {
-        it('should generate a buffer of the specified length', () => {
-            const length = 16;
-            const buffer = generateRandomBytes(length);
-            expect(buffer.byteLength).toBe(length);
-        });
-
-        it('should generate different bytes each time', () => {
-            const b1 = new Uint8Array(generateRandomBytes(16));
-            const b2 = new Uint8Array(generateRandomBytes(16));
-            expect(b1).not.toEqual(b2);
-        });
-    });
-
-    describe('concatenateBuffers', () => {
-        it('should concatenate multiple buffers correctly', () => {
-            const buf1 = new Uint8Array([1, 2]).buffer;
-            const buf2 = new Uint8Array([3, 4]).buffer;
-            const buf3 = new Uint8Array([5]).buffer;
-            
-            const result = concatenateBuffers([buf1, buf2, buf3]);
-            expect(new Uint8Array(result)).toEqual(new Uint8Array([1, 2, 3, 4, 5]));
-        });
-
-        it('should handle an empty array of buffers', () => {
-            const result = concatenateBuffers([]);
-            expect(result.byteLength).toBe(0);
         });
     });
 });

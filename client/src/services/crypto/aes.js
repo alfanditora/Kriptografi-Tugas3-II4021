@@ -42,12 +42,3 @@ export async function decrypt(ciphertext, iv, key) {
     );
     return plaintext;
 }
-
-export async function generateIV() {
-    /**
-     * Menghasilkan Initialization Vector (IV) 16-byte secara acak untuk AES-CBC.
-     * @returns {Promise<ArrayBuffer>} IV berukuran 16-byte.
-     */
-    const iv = crypto.getRandomValues(new Uint8Array(16));
-    return iv.buffer;
-}

@@ -1,20 +1,3 @@
-export async function generateKey() {
-    /**
-     * Menghasilkan kunci HMAC-SHA256.
-     * @returns {Promise<CryptoKey>} Kunci HMAC-SHA256.
-     */
-    
-    const key = await crypto.subtle.generateKey(
-        {
-            name: "HMAC",
-            hash: "SHA-256"
-        },
-        true,
-        ["sign", "verify"]
-    );
-    return key;
-}
-
 export async function sign(message, key) {
     /**
      * Membuat tanda tangan digital (signature) pesan menggunakan HMAC.

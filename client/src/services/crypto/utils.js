@@ -30,30 +30,3 @@ export function stringToArrayBuffer(str) {
     const encoder = new TextEncoder();
     return encoder.encode(str).buffer;
 }
-
-/**
- * Menghasilkan byte acak yang aman secara kriptografis.
- * @param {number} length - Jumlah byte yang diinginkan.
- * @returns {ArrayBuffer} Buffer berisi byte acak.
- */
-export function generateRandomBytes(length) {
-    const array = new Uint8Array(length);
-    crypto.getRandomValues(array);
-    return array.buffer;
-}
-
-/**
- * Menggabungkan beberapa ArrayBuffer menjadi satu.
- * @param {ArrayBuffer[]} buffers - Daftar buffer yang akan digabungkan.
- * @returns {ArrayBuffer} Buffer hasil penggabungan.
- */
-export function concatenateBuffers(buffers) {
-    const totalLength = buffers.reduce((sum, buf) => sum + buf.byteLength, 0);
-    const result = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const buffer of buffers) {
-        result.set(new Uint8Array(buffer), offset);
-        offset += buffer.byteLength;
-    }
-    return result.buffer;
-}

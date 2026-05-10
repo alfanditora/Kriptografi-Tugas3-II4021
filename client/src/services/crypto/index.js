@@ -1,12 +1,12 @@
 import { generateKeyPair, exportPublicKey, exportPrivateKeyRaw } from './ecdh';
-import { deriveKeyFromPassword, generateSalt as generateKdfSalt } from './kdf';
+import { deriveKeyFromPassword, generateSalt } from './kdf';
 import { encrypt, decrypt } from './aes';
 
 export * from './utils';
 export * from './ecdh';
-export * from './kdf';
+export { deriveKeyFromPassword, generateSalt } from './kdf';
 export * from './aes';
-export * from './hkdf';
+export { deriveChatKeys } from './hkdf';
 export * from './hmac';
 
 /**
@@ -20,7 +20,7 @@ export async function prepareRegistrationData(email, password) {
     const publicKey = await exportPublicKey(keyPair);
     const privateKeyRaw = await exportPrivateKeyRaw(keyPair);
     
-    const kdfSalt = await generateKdfSalt();
+    const kdfSalt = await generateSalt();
     const kdfIterations = 100000;
     
     const { key: aesKey } = await deriveKeyFromPassword(password, kdfSalt, kdfIterations);

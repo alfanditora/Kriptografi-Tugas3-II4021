@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { encrypt, decrypt, generateIV } from './aes';
+import { encrypt, decrypt } from './aes';
 
 describe('crypto/aes', () => {
     let key;
@@ -16,13 +16,6 @@ describe('crypto/aes', () => {
             true,
             ["encrypt", "decrypt"]
         );
-    });
-
-    describe('generateIV', () => {
-        it('should generate a 16-byte IV', async () => {
-            const iv = await generateIV();
-            expect(iv.byteLength).toBe(16);
-        });
     });
 
     describe('Encryption and Decryption', () => {
@@ -60,14 +53,6 @@ describe('crypto/aes', () => {
             );
 
             await expect(decrypt(ciphertext, iv, wrongKey)).rejects.toThrow();
-        });
-
-        it('should fail to decrypt with wrong IV', async () => {
-            const message = "Secret Message";
-            const { ciphertext } = await encrypt(message, key);
-            const wrongIv = await generateIV();
-
-            await expect(decrypt(ciphertext, wrongIv, key)).rejects.toThrow();
         });
     });
 });
