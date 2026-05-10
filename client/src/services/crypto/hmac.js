@@ -1,6 +1,6 @@
 export async function sign(message, key) {
     /**
-     * Membuat tanda tangan digital (signature) pesan menggunakan HMAC.
+     * !Membuat tanda tangan digital (signature) pesan menggunakan HMAC.
      * @param {string} message - Pesan yang akan ditandatangani.
      * @param {CryptoKey} key - Kunci HMAC.
      * @returns {Promise<ArrayBuffer>} Tanda tangan (signature) yang dihasilkan.
@@ -12,7 +12,7 @@ export async function sign(message, key) {
 
 export async function verify(message, signature, key) {
     /**
-     * Memverifikasi tanda tangan digital HMAC dari suatu pesan.
+     * !Memverifikasi tanda tangan digital HMAC dari suatu pesan.
      * @param {string} message - Pesan yang akan diverifikasi.
      * @param {ArrayBuffer} signature - Tanda tangan yang akan diperiksa.
      * @param {CryptoKey} key - Kunci HMAC.

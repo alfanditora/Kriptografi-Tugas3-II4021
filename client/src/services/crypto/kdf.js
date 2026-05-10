@@ -2,7 +2,7 @@ import { stringToArrayBuffer } from './utils';
 
 export async function deriveKeyFromPassword(password, salt, iterations = 600000) {
     /**
-     * [!SELF_IMPLEMENTED] Menggunakan PBKDF2 dengan 600.000 iterasi untuk keamanan optimal.
+     * [!!SELF_IMPLEMENTED] Menggunakan PBKDF2 dengan 600.000 iterasi untuk keamanan optimal.
      * Menurunkan kunci AES-256 dari kata sandi menggunakan algoritma PBKDF2.
      * @param {string} password - Kata sandi sebagai basis derivasi.
      * @param {ArrayBuffer} salt - Salt 16-byte.

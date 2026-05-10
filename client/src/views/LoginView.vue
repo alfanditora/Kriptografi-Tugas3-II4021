@@ -225,7 +225,7 @@ async function handleSubmit() {
           iv: response.user.privateKeyIv
         },
         response.user.privateKeyKdfSalt,
-        600000 // Default iterations
+        cryptoStore.kdfIterations
       )
       console.log('[Kripto] Kunci privat berhasil dimuat ke memori.');
     } else {
