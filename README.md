@@ -118,7 +118,7 @@ JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----"
 **Konfigurasi Frontend (`client/.env.local`)**
 ```env
 # URL API Backend
-VITE_API_URL=http://localhost:8000
+VITE_API_URL=http://localhost:8000/api
 
 # Nama Aplikasi
 VITE_APP_NAME=SEChatbox
