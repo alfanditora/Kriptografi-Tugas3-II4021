@@ -40,40 +40,58 @@ Aplikasi ini menggunakan filosofi "blind server", di mana server hanya bertindak
 
 ## Tata Cara Menjalankan Program
 
-Proyek ini telah dikemas menggunakan Docker untuk memudahkan instalasi dan eksekusi. Pastikan Anda telah menginstal **Docker** dan **Docker Compose** di perangkat Anda.
+Proyek ini telah dikemas sepenuhnya menggunakan Docker untuk memudahkan instalasi dan eksekusi seluruh komponen (Frontend, Backend, dan Database). Pastikan sudah menginstal **Docker** dan **Docker Compose** di perangkat.
 
 ### Menjalankan Menggunakan Docker
 
-1. **Jalankan layanan Backend dan Database**  
+1. **Persiapan Environment**  
+   Salin file `.env.example` menjadi `.env` di root direktori dan sesuaikan konfigurasinya jika diperlukan.
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Jalankan Seluruh Layanan**  
    Di terminal (pada *root* direktori proyek), jalankan perintah:
    ```bash
-   docker-compose up -d
+   docker-compose up --build -d
    ```
-   *Perintah ini akan menyalakan kontainer PostgreSQL (`chat_db`) dan FastAPI backend (`chat_backend`).*
+   *Perintah ini akan membangun image dan menyalakan kontainer untuk Database (`chat_db`), Backend (`chat_backend`), dan Frontend (`chat_client`).*
 
-2. **Jalankan Frontend secara lokal**  
-   Buka terminal baru, navigasikan ke direktori `client`, lalu instal dependensi dan mulai server pengembangan:
+3. **Akses Aplikasi**  
+   Setelah semua kontainer berjalan, akses aplikasi melalui peramban (browser):
+   - **Frontend:** `http://localhost:5173`
+   - **Backend API Docs:** `http://localhost:8000/docs`
+
+### Menjalankan Secara Lokal (Tanpa Docker)
+
+Jika ingin menjalankan untuk keperluan pengembangan (development) tanpa Docker:
+
+1. **Backend:**
+   ```bash
+   cd server
+   # Buat venv dan install requirements
+   pip install -r requirements.txt
+   uvicorn app.main:app --reload
+   ```
+
+2. **Frontend:**
    ```bash
    cd client
    pnpm install
    pnpm dev
    ```
 
-3. **Akses Aplikasi**  
-   Buka peramban (browser) dan akses alamat `http://localhost:5173`.
-
 ### Menjalankan Pengujian (Unit Tests)
 
 - **Test Backend (JWT Library):**
   ```bash
   cd server
-  source venv/bin/activate
   pytest tests/test_jwt_core.py -v -s
   ```
-- **Test Frontend (HMAC Crypto):**
+- **Test Frontend (Crypto Services):**
   ```bash
   cd client
-  pnpm vitest run src/services/crypto/hmac.spec.js
+  pnpm vitest run
   ```
 
 ## Environment / Configuration yang Digunakan
@@ -97,4 +115,16 @@ JWT_PRIVATE_KEY="-----BEGIN EC PRIVATE KEY----- ... -----END EC PRIVATE KEY-----
 JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY----- ... -----END PUBLIC KEY-----"
 ```
 
-*Catatan: Variabel di atas juga dibaca langsung oleh berkas `docker-compose.yml` untuk inisialisasi basis data.*
+**Konfigurasi Frontend (`client/.env.local`)**
+```env
+# URL API Backend
+VITE_API_URL=http://localhost:8000
+
+# Nama Aplikasi
+VITE_APP_NAME=SEChatbox
+
+# Mode Mock API (set ke true jika ingin mencoba tanpa backend)
+VITE_USE_MOCK_API=false
+```
+
+*Catatan: Variabel backend juga dibaca langsung oleh berkas `docker-compose.yml` untuk inisialisasi basis data.*

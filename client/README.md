@@ -1,44 +1,46 @@
-# client
+# SEChatbox Client (Frontend)
 
-This template should help get you started developing with Vue 3 in Vite.
+Bagian ini berisi source code UI (Frontend) untuk aplikasi SEChatbox, yang dibangun menggunakan **Vue.js 3** dan **Vuetify**.
 
-## Recommended IDE Setup
+## Fitur Utama
+- **End-to-End Encryption (E2EE):** Semua proses enkripsi dan dekripsi pesan dilakukan di sisi klien menggunakan **Web Crypto API**.
+- **Key Management:** Pembangkitan pasangan kunci ECDH (X25519) dan penyimpanan kunci privat terenkripsi di sisi klien.
+- **Autentikasi:** Integrasi dengan JWT berbasis ECDSA untuk sesi pengguna yang aman.
+- **Real-time Messaging:** Menerima pesan secara langsung menggunakan *Server-Sent Events* (SSE).
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Persiapan Pengembangan (Local Setup)
 
-## Recommended Browser Setup
+Jika ingin menjalankan frontend secara terpisah di luar Docker:
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
+### Instalasi Dependensi
+Pastikan menggunakan [pnpm](https://pnpm.io/) (bun atau npm juga bisa, tapi disarankan pake pnpm) untuk manajemen paket.
 ```sh
-npm install
+pnpm install
 ```
 
-### Compile and Hot-Reload for Development
-
+### Menjalankan Server Pengembangan
+Menjalankan aplikasi dengan fitur *Hot-Reload* untuk keperluan coding.
 ```sh
-npm run dev
+pnpm dev
 ```
 
-### Compile and Minify for Production
-
+### Linter & Pemeriksaan Kode
+Menjalankan ESLint untuk memastikan kualitas kode tetap terjaga.
 ```sh
-npm run build
+pnpm lint
 ```
 
-### Lint with [ESLint](https://eslint.org/)
-
+## Pengujian (Unit Testing)
+Aplikasi ini menggunakan **Vitest** untuk menguji logika kriptografi.
 ```sh
-npm run lint
+# Menjalankan seluruh tes
+pnpm vitest run
+
+# Menjalankan tes spesifik untuk modul kripto
+pnpm vitest run src/services/crypto/
 ```
+
+## Pengaturan IDE yang Direkomendasikan
+- **Editor:** [VS Code](https://code.visualstudio.com/)
+- **Ekstensi:** [Vue - Official (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+- **Catatan:** Nonaktifkan ekstensi Vetur agar tidak terjadi konflik dengan Volar pada Vue 3.
